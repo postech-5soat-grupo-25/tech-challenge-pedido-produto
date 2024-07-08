@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::sync::Arc;
 use bytes::BytesMut;
 use postgres_from_row::FromRow;
 use tokio_postgres::Client;
@@ -15,7 +16,7 @@ use crate::{
 use crate::external::postgres::table::Table;
 
 pub struct PostgresProdutoRepository {
-    client: Client,
+    client: Arc<Client>,
     tables: Vec<Table>,
 }
 
@@ -79,7 +80,7 @@ impl ToSql for Categoria {
 
 
 impl PostgresProdutoRepository {
-    pub async fn new(client: Client, tables: Vec<Table>) -> Self {
+    pub async fn new(client: Arc<Client>, tables: Vec<Table>) -> Self {
         let repo = PostgresProdutoRepository { client, tables };
         repo.check_for_tables().await;
         repo

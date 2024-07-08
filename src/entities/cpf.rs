@@ -39,6 +39,12 @@ impl Cpf {
         let dv2 = if dv2 < 2 { 0 } else { 11 - dv2 };
         dv1 == cpf[9] && dv2 == cpf[10]
     }
+
+    pub fn get_only_number_string(&self) -> String {
+        let full_string = self.0.clone();
+        let only_number = full_string.replace(".", "").replace("-", "");
+        only_number
+    }
 }
 
 impl PartialEq for Cpf {

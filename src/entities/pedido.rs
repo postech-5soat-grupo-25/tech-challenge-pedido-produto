@@ -1,10 +1,9 @@
-use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     base::{assertion_concern, domain_error::DomainError},
-    entities::{cliente::Cliente, produto::Produto},
+    entities::{cpf::Cpf, produto::Produto},
 };
 
 // Considerar Ordem de Status
@@ -24,7 +23,7 @@ pub enum Status {
 #[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Pedido {
     id: usize,
-    cliente: Option<Cliente>,
+    cliente: Option<Cpf>,
     lanche: Option<Produto>,
     acompanhamento: Option<Produto>,
     bebida: Option<Produto>,
@@ -37,7 +36,7 @@ pub struct Pedido {
 impl Pedido {
     pub fn new(
         id: usize,
-        cliente: Option<Cliente>,
+        cliente: Option<Cpf>,
         lanche: Option<Produto>,
         acompanhamento: Option<Produto>,
         bebida: Option<Produto>,
@@ -67,7 +66,6 @@ impl Pedido {
             ));
         };
 
-
         match self.status {
             Status::EmPreparacao
             | Status::Pago
@@ -91,7 +89,7 @@ impl Pedido {
         &self.id
     }
 
-    pub fn cliente(&self) -> Option<&Cliente> {
+    pub fn cliente(&self) -> Option<&Cpf> {
         self.cliente.as_ref()
     }
 
@@ -124,7 +122,6 @@ impl Pedido {
     }
 
     pub fn valor(&self) -> f64 {
-
         let mut total = 0.0;
 
         if let Some(lanche) = &self.lanche {
@@ -139,11 +136,11 @@ impl Pedido {
             total += bebida.preco();
         }
 
-        total 
+        total
     }
 
     // Setters
-    pub fn set_cliente(&mut self, cliente: Option<Cliente>) {
+    pub fn set_cliente(&mut self, cliente: Option<Cpf>) {
         self.cliente = cliente;
     }
 
@@ -197,23 +194,10 @@ impl Pedido {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entities::cliente::Cliente;
-    use crate::entities::cpf::Cpf;
     use crate::entities::ingredientes::Ingredientes;
     use crate::entities::produto::Categoria;
     use crate::entities::produto::Produto;
-
-    fn create_valid_cliente() -> Cliente {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
-        Cliente::new(
-            1,
-            "Fulano da Silva".to_string(),
-            "fulano.silva@exemplo.com".to_string(),
-            Cpf::new("123.456.789-09".to_string()).unwrap(),
-            _now.clone(),
-            _now,
-        )
-    }
+    use chrono::Utc;
 
     fn create_valid_produto() -> Produto {
         let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
@@ -237,7 +221,7 @@ mod tests {
 
     fn create_valid_pedido() -> Pedido {
         let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
-        let cliente = create_valid_cliente();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
         let produto = create_valid_produto();
         Pedido::new(
             1,
@@ -272,7 +256,7 @@ mod tests {
     #[test]
     fn test_pedido_validate_entity_no_items() {
         let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
-        let cliente = create_valid_cliente();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
         let pedido = Pedido::new(
             1,
             Some(cliente),

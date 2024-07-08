@@ -1,18 +1,10 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use rocket::http::hyper::Method;
 use tokio::sync::Mutex;
 
 use crate::base::domain_error::DomainError;
-use crate::entities::pagamento::{self, Pagamento};
 use crate::entities::pedido::{self, Pedido};
-use crate::traits::pagamento_webhook_adapter::PagamentoWebhookAdapter;
-use serde_json::Value;
-use crate::traits::{
-    cliente_gateway::ClienteGateway, pagamento_gateway::PagamentoGateway,
-    pedido_gateway::PedidoGateway, produto_gateway::ProdutoGateway,
-};
+use crate::traits::{pedido_gateway::PedidoGateway, produto_gateway::ProdutoGateway};
 
 use crate::use_cases::{
     pedidos_e_pagamentos_use_case::CreatePedidoInput,
@@ -28,17 +20,11 @@ pub struct PedidoController {
 impl PedidoController {
     pub fn new(
         pedido_repository: Arc<Mutex<dyn PedidoGateway + Sync + Send>>,
-        cliente_repository: Arc<Mutex<dyn ClienteGateway + Sync + Send>>,
         produto_repository: Arc<Mutex<dyn ProdutoGateway + Sync + Send>>,
-        pagamento_repository: Arc<Mutex<dyn PagamentoGateway + Sync + Send>>,
-        metodos_pagamento: HashMap<String, Arc<dyn PagamentoWebhookAdapter + Sync + Send>>
     ) -> PedidoController {
         let pedidos_e_pagamentos_use_case = PedidosEPagamentosUseCase::new(
             pedido_repository.clone(),
-            cliente_repository,
             produto_repository,
-            pagamento_repository,
-            metodos_pagamento,
         );
         let preparacao_e_entrega_use_case = PreparacaoeEntregaUseCase::new(pedido_repository);
 
@@ -91,16 +77,6 @@ impl PedidoController {
             .await
     }
 
-    pub async fn atualiza_cliente_pedido(
-        &self,
-        id: usize,
-        cliente_id: usize,
-    ) -> Result<Pedido, DomainError> {
-        self.pedidos_e_pagamentos_use_case
-            .adicionar_cliente(id, cliente_id)
-            .await
-    }
-
     pub async fn atualiza_produto_by_categoria(
         &self,
         id: usize,
@@ -125,30 +101,5 @@ impl PedidoController {
             }
             _ => Err(DomainError::Invalid("Categoria inválida".to_string())),
         }
-    }
-
-    pub async fn get_pagamento_by_pedido_id(&self, id: usize) -> Result<Pagamento, DomainError> {
-        self.pedidos_e_pagamentos_use_case
-            .get_pagamento_by_pedido_id(id)
-            .await
-    }
-
-    pub async fn pagar(&self, id: usize) -> Result<Pagamento, DomainError> {
-        self.pedidos_e_pagamentos_use_case
-            .criar_pagamento_do_pedido(id)
-            .await
-    }
-
-    pub async fn webhook_pagamento(
-        &self,
-        id: usize,
-        data_pagamento: Value,
-    ) -> Result<Pagamento, DomainError> {
-        self.pedidos_e_pagamentos_use_case
-            .webhook_pagamento(id, data_pagamento)
-            .await
-
-       
-        
     }
 }

@@ -1,2 +1,0 @@
-pub mod jwt_authentication_adapter;
-pub mod mercadopago_pagamento_webhook_adapter;

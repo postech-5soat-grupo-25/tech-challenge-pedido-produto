@@ -1,4 +1,3 @@
-use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -152,6 +151,7 @@ impl Produto {
 // Unit Tests
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
     use super::*;
 
     fn create_valid_produto() -> Produto {

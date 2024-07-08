@@ -7,11 +7,9 @@ use tokio_postgres::types::{FromSql, ToSql, Type};
 use tokio_postgres::Client;
 
 use crate::base::domain_error::DomainError;
-use crate::entities::cliente::Cliente;
-use crate::entities::pagamento::Pagamento;
+use crate::entities::cpf::Cpf;
 use crate::entities::pedido::{Pedido, Status};
 use crate::entities::produto::Produto;
-use crate::traits::cliente_gateway::ClienteGateway;
 use crate::traits::pedido_gateway::PedidoGateway;
 use crate::traits::produto_gateway::ProdutoGateway;
 
@@ -23,12 +21,11 @@ const QUERY_PEDIDOS: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id
 const QUERY_PEDIDO_BY_ID: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido WHERE id = $1";
 const QUERY_PEDIDOS_NOVOS: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido WHERE status IN ('Pendente', 'EmPreparacao')";
 const SET_PEDIDO_STATUS: &str = "UPDATE pedido SET status = $2, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const SET_PEDIDO_CLIENTE: &str = "UPDATE pedido SET cliente_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
+// const SET_PEDIDO_CLIENTE: &str = "UPDATE pedido SET cliente_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 const SET_PEDIDO_LANCHE: &str = "UPDATE pedido SET lanche_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 const SET_PEDIDO_ACOMPANHAMENTO: &str = "UPDATE pedido SET acompanhamento_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 const SET_PEDIDO_BEBIDA: &str = "UPDATE pedido SET bebida_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const SET_PEDIDO_PAGAMENTO: &str = "UPDATE pedido SET pagamento = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const CREATE_PAGAMENTO: &str = "INSERT INTO pagamento (id_pedido, estado, metodo, referencia, data_criacao) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)";
+// const SET_PEDIDO_PAGAMENTO: &str = "UPDATE pedido SET pagamento = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 
 impl<'a> FromSql<'a> for Status {
     fn from_sql(
@@ -41,7 +38,6 @@ impl<'a> FromSql<'a> for Status {
             "Pendente" => Ok(Status::Pendente),
             "EmPreparacao" => Ok(Status::EmPreparacao),
             "Pronto" => Ok(Status::Pronto),
-            "Pendente" => Ok(Status::Pendente),
             "Finalizado" => Ok(Status::Finalizado),
             "Cancelado" => Ok(Status::Cancelado),
             "Invalido" => Ok(Status::Invalido),
@@ -87,23 +83,20 @@ impl ToSql for Status {
 }
 
 pub struct PostgresPedidoRepository {
-    client: Client,
+    client: Arc<Client>,
     tables: Vec<Table>,
-    cliente_repository: Arc<Mutex<dyn ClienteGateway + Send + Sync>>,
     produto_repository: Arc<Mutex<dyn ProdutoGateway + Send + Sync>>,
 }
 
 impl PostgresPedidoRepository {
     pub async fn new(
-        client: Client,
+        client: Arc<Client>,
         tables: Vec<Table>,
-        cliente_repository: Arc<Mutex<dyn ClienteGateway + Send + Sync>>,
         produto_repository: Arc<Mutex<dyn ProdutoGateway + Send + Sync>>,
     ) -> Self {
         let repo = PostgresPedidoRepository {
             client,
             tables,
-            cliente_repository,
             produto_repository,
         };
         repo.check_for_tables().await;
@@ -120,11 +113,17 @@ impl PostgresPedidoRepository {
     async fn pedido_from_proxy(&self, pedido_row: &tokio_postgres::Row) -> Pedido {
         let _pedido: ProxyPedido = ProxyPedido::from_row(&pedido_row);
 
-        let cliente = if let Some(cliente_id) = _pedido.cliente_id() {
-            let cliente_repo = self.cliente_repository.lock().await;
-            cliente_repo.get_cliente_by_id(*cliente_id).await.ok()
-        } else {
-            None
+        let cliente_cpf_string = match _pedido.cliente_id() {
+            Some(_cliente_id) => {
+                // TODO: formatar corretamente o CPF
+                Some("000.000.000-00".to_string())
+            }
+            None => None,
+        };
+
+        let cliente = match Cpf::new(cliente_cpf_string.unwrap()) {
+            Ok(cpf) => Some(cpf),
+            Err(_) => None,
         };
 
         let lanche = if let Some(lanche_id) = _pedido.lanche_id() {
@@ -206,7 +205,10 @@ impl PedidoGateway for PostgresPedidoRepository {
     }
 
     async fn create_pedido(&mut self, pedido: Pedido) -> Result<Pedido, DomainError> {
-        let cliente_id = pedido.cliente().map(|cliente| *cliente.id() as i32);
+        let cliente_id = match pedido.cliente() {
+            Some(cliente) => cliente.get_only_number_string(),
+            None => "".to_string(),
+        };
         let lanche_id = pedido.lanche().map(|lanche| *lanche.id() as i32);
         let acompanhamento_id = pedido
             .acompanhamento()
@@ -252,27 +254,6 @@ impl PedidoGateway for PostgresPedidoRepository {
             }
             Ok(None) => Err(DomainError::NotFound),
             Err(_) => Err(DomainError::Invalid("Pedido".to_string())),
-        }
-    }
-
-    async fn cadastrar_cliente(
-        &mut self,
-        pedido_id: usize,
-        cliente: Cliente,
-    ) -> Result<Pedido, DomainError> {
-        let _pedido_id: i32 = pedido_id as i32;
-        let _cliente_id = *cliente.id() as i32;
-
-        let updated_pedido = self
-            .client
-            .query(SET_PEDIDO_CLIENTE, &[&_pedido_id, &_cliente_id])
-            .await
-            .unwrap();
-
-        let updated_pedido = updated_pedido.get(0);
-        match updated_pedido {
-            Some(pedido) => Ok(self.pedido_from_proxy(&pedido).await),
-            None => Err(DomainError::NotFound),
         }
     }
 
@@ -339,33 +320,6 @@ impl PedidoGateway for PostgresPedidoRepository {
         match updated_pedido {
             Some(pedido) => Ok(self.pedido_from_proxy(&pedido).await),
             None => Err(DomainError::NotFound),
-        }
-    }
-
-    async fn cadastrar_pagamento(
-        &mut self,
-        pagamento: Pagamento
-    ) -> Result<Pagamento, DomainError> {
-        let _id_pedido = *pagamento.id_pedido() as i32;
-        let new_pagamento_row = self
-            .client
-            .query_one(
-                CREATE_PAGAMENTO,
-                &[
-                    &_id_pedido,
-                    &String::from("pendente"),
-                    &pagamento.metodo(),
-                    &pagamento.referencia(),
-                ],
-            )
-            .await;
-        match new_pagamento_row {
-            Ok(row) => {
-                let new_pagamento = Pagamento::from_row(&row);
-                println!("Novo pagamento cadastrado: {:?}", new_pagamento);
-                Ok(new_pagamento)
-            }
-            Err(_) => Err(DomainError::Invalid("Pagamento".to_string())),
         }
     }
 }

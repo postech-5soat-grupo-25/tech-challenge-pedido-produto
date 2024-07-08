@@ -7,18 +7,15 @@ use rocket_okapi::{openapi, openapi_get_routes};
 use tokio::sync::Mutex;
 
 use crate::api::error_handling::ErrorResponse;
-use crate::api::request_guards::authentication_guard::AuthenticatedUser;
 use crate::controllers::produto_controller::ProdutoController;
 use crate::traits::produto_gateway::ProdutoGateway;
 use crate::use_cases::gerenciamento_de_produtos_use_case::CreateProdutoInput;
 use crate::entities::produto::Produto;
-use crate::api::request_guards::admin_guard::AdminUser;
 
 #[openapi(tag = "Produtos")]
 #[get("/")]
 async fn get_produto(
     produto_repository: &State<Arc<Mutex<dyn ProdutoGateway + Sync + Send>>>,
-    _logged_user_info: AuthenticatedUser,
 ) -> Result<Json<Vec<Produto>>, Status> {
     let produto_controller = ProdutoController::new(produto_repository.inner().clone());
     let produtos = produto_controller.get_produto().await?;
@@ -30,7 +27,6 @@ async fn get_produto(
 async fn get_produto_by_id(
     produto_repository: &State<Arc<Mutex<dyn ProdutoGateway + Sync + Send>>>,
     id: usize,
-    _logged_user_info: AuthenticatedUser,
 ) -> Result<Json<Produto>, Status> {
     let produto_controller = ProdutoController::new(produto_repository.inner().clone());
     let produto = produto_controller.get_produto_by_id(id).await?;
@@ -42,7 +38,6 @@ async fn get_produto_by_id(
 async fn create_produto(
     produto_repository: &State<Arc<Mutex<dyn ProdutoGateway + Sync + Send>>>,
     produto_input: Json<CreateProdutoInput>,
-    _logged_user_info: AuthenticatedUser,
 ) -> Result<Json<Produto>, Status> {
     let produto_controller = ProdutoController::new(produto_repository.inner().clone());
     let produto_input = produto_input.into_inner();
@@ -56,7 +51,6 @@ async fn update_produto(
     produto_repository: &State<Arc<Mutex<dyn ProdutoGateway + Sync + Send>>>,
     produto_input: Json<CreateProdutoInput>,
     id: usize,
-    _logged_user_info: AuthenticatedUser,
 ) -> Result<Json<Produto>, Status> {
     let produto_controller = ProdutoController::new(produto_repository.inner().clone());
     let produto_input = produto_input.into_inner();
@@ -69,7 +63,6 @@ async fn update_produto(
 async fn delete_produto(
     produto_repository: &State<Arc<Mutex<dyn ProdutoGateway + Sync + Send>>>,
     id: usize,
-    _logged_user_info: AdminUser,
 ) -> Result<Json<String>, Status> {
     let produto_controller = ProdutoController::new(produto_repository.inner().clone());
     produto_controller.delete_produto(id).await?;

@@ -2,10 +2,8 @@ use mockall::*;
 
 use crate::base::domain_error::DomainError;
 use crate::entities::{
-    cliente::Cliente,
     pedido::{Pedido, Status},
     produto::Produto,
-    pagamento::Pagamento,
 };
 use std::fmt;
 use std::str::FromStr;
@@ -56,12 +54,6 @@ pub trait PedidoGateway {
 
     async fn get_pedido_by_id(&self, pedido_id: usize) -> Result<Pedido, DomainError>;
 
-    async fn cadastrar_cliente(
-        &mut self,
-        pedido_id: usize,
-        cliente: Cliente,
-    ) -> Result<Pedido, DomainError>;
-
     async fn cadastrar_lanche(
         &mut self,
         pedido_id: usize,
@@ -79,11 +71,6 @@ pub trait PedidoGateway {
         pedido_id: usize,
         bebida: Produto,
     ) -> Result<Pedido, DomainError>;
-
-    async fn cadastrar_pagamento(
-        &mut self,
-        pagamento: Pagamento,
-    ) -> Result<Pagamento, DomainError>;
 
     async fn atualiza_status(
         &mut self,

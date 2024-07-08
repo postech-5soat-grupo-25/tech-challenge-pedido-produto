@@ -1,7 +1,7 @@
 FROM rust:1.75-alpine3.19 as builder
 
 # Feature apenas em nightly
-RUN rustup update nightly 
+RUN rustup update nightly
 
 RUN rustup default nightly
 

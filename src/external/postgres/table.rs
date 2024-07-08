@@ -2,21 +2,15 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub enum TablesNames {
-  Usuario,
-  Cliente,
   Pedido,
   Produto,
-  Pagamento
 }
 
 impl TablesNames {
   pub fn to_string(&self) -> String {
-    match self {    
-      TablesNames::Usuario => "usuario".to_string(),
-      TablesNames::Cliente => "cliente".to_string(),
+    match self {
       TablesNames::Pedido => "pedido".to_string(),
       TablesNames::Produto => "produto".to_string(),
-      TablesNames::Pagamento => "pagamento".to_string(),
     }
   }
 }

@@ -2,34 +2,22 @@ use chrono::Utc;
 use tokio::time::{sleep, Duration};
 
 use crate::base::domain_error::DomainError;
-use crate::entities::cliente::Cliente;
 use crate::entities::pedido::{Pedido, Status};
 use crate::entities::produto::{Categoria, Produto};
 
 use crate::entities::cpf::Cpf;
 use crate::entities::ingredientes::Ingredientes;
-use crate::entities::pagamento::Pagamento;
 
 use crate::traits::pedido_gateway::PedidoGateway;
 
 #[derive(Clone)]
 pub struct InMemoryPedidoRepository {
     _pedidos: Vec<Pedido>,
-    _pagamentos: Vec<Pagamento>,
 }
 
 impl InMemoryPedidoRepository {
     pub fn new() -> Self {
         let current_date = Utc::now().naive_utc().format("%Y-%m-%d").to_string();
-
-        let cliente = Cliente::new(
-            1,
-            "Fulano da Silva".to_string(),
-            "fulano.silva@exemplo.com".to_string(),
-            Cpf::new("123.456.789-09".to_string()).unwrap(),
-            "2024-01-17".to_string(),
-            "2024-01-17".to_string(),
-        );
 
         let lanche = Produto::new(
             1,
@@ -50,7 +38,7 @@ impl InMemoryPedidoRepository {
 
         let pedido = Pedido::new(
             1,
-            Some(cliente),
+            Some(Cpf::new("000.000.000-00".to_string()).unwrap()),
             Some(lanche),
             None,
             None,
@@ -60,21 +48,11 @@ impl InMemoryPedidoRepository {
             current_date.clone(),
         );
 
-        let pagamento = Pagamento::new(
-            1,
-            1,
-            "pago".to_string(),
-            100.0,
-            "MercadoPago".to_string(),
-            "1234".to_string(),
-            current_date,
-        );
 
         println!("Usando repositório em memória!");
 
         InMemoryPedidoRepository {
             _pedidos: vec![pedido],
-            _pagamentos: vec![pagamento],
         }
     }
 }
@@ -111,7 +89,7 @@ impl PedidoGateway for InMemoryPedidoRepository {
 
     async fn atualiza_status(&mut self, id: usize, status: Status) -> Result<Pedido, DomainError> {
         let pedidos = &mut self._pedidos;
-        if (status == Status::Invalido) {
+        if status == Status::Invalido {
             return Err::<Pedido, _>(DomainError::Invalid("status".to_string()));
         }
         for pedido in pedidos.iter_mut() {
@@ -139,20 +117,7 @@ impl PedidoGateway for InMemoryPedidoRepository {
         Err(DomainError::NotFound)
     }
 
-    async fn cadastrar_cliente(
-        &mut self,
-        pedido_id: usize,
-        cliente: Cliente,
-    ) -> Result<Pedido, DomainError> {
-        let pedidos = &mut self._pedidos;
-        for pedido in pedidos.iter_mut() {
-            if *pedido.id() == pedido_id {
-                pedido.set_cliente(Some(cliente.clone()));
-                return Ok(pedido.clone());
-            }
-        }
-        Err(DomainError::NotFound)
-    }
+
 
     async fn cadastrar_lanche(
         &mut self,
@@ -194,21 +159,6 @@ impl PedidoGateway for InMemoryPedidoRepository {
             if *pedido.id() == pedido_id {
                 pedido.set_bebida(Some(bebida.clone()));
                 return Ok(pedido.clone());
-            }
-        }
-        Err(DomainError::NotFound)
-    }
-
-    async fn cadastrar_pagamento(
-        &mut self,
-        pagamento: Pagamento,
-    ) -> Result<Pagamento, DomainError> {
-        let pedidos = &mut self._pedidos;
-        for pedido in pedidos.iter_mut() {
-            if *pedido.id() == *pagamento.id_pedido() {
-                let pagamentos = &mut self._pagamentos;
-                pagamentos.push(pagamento.clone());
-                return Ok(pagamento.clone());
             }
         }
         Err(DomainError::NotFound)

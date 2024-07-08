@@ -2,7 +2,6 @@
 
 #[macro_use] extern crate rocket;
 
-mod adapters;
 pub mod api;
 mod base;
 mod controllers;

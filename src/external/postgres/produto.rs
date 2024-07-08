@@ -1,7 +1,6 @@
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use postgres_from_row::FromRow;
 use std::collections::HashMap;
-use std::time::SystemTime;
 
 use crate::entities::produto::Categoria;
 use crate::entities::produto::Produto;
