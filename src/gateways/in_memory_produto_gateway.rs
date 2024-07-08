@@ -77,19 +77,26 @@ impl ProdutoGateway for InMemoryProdutoRepository {
     }
 
     async fn create_produto(&mut self, produto: Produto) -> Result<Produto, DomainError> {
-        sleep(Duration::from_secs(1)).await;
-        let existing_produto = self.get_produto_by_id(produto.id().to_owned()).await;
+        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
 
-        if existing_produto.is_ok() {
-            return Err(DomainError::AlreadyExists);
-        }
+        let actual_produto = Produto::new(
+            self._produto.len(),
+            produto.nome().to_string(),
+            produto.foto().to_string(),
+            produto.descricao().to_string(),
+            produto.categoria().to_owned(),
+            produto.preco().to_owned(),
+            produto.ingredientes().to_owned(),
+            _now.clone(),
+            _now,
+        );
 
         let mut produto_list = self._produto.clone();
-        produto_list.push(produto.clone());
+        produto_list.push(actual_produto.clone());
 
         self._produto = produto_list;
 
-        Ok(produto.clone())
+        Ok(actual_produto)
     }
 
     async fn update_produto(&mut self, new_produto_data: Produto) -> Result<Produto, DomainError> {
