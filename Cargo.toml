@@ -20,7 +20,3 @@ serde_with = "3.4.0"
 bytes = "1.0"
 mockall = "0.12.1"
 tokio = "1.36.0"
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json", "blocking"] }
-aws-sdk-cognitoidentityprovider = "1.26.0"
-aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
-aws-types = "0.7" 
