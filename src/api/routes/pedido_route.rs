@@ -90,35 +90,14 @@ async fn put_status_pedido(
     Ok(Json(pedido))
 }
 
-// TODO: endpoint pra setar o cliente de um pedido
-
-#[openapi(tag = "Pedidos")]
-#[put("/<id>/produto/<categoria>/<produto_id>")]
-async fn put_produto_by_categoria(
-    pedido_repository: &State<Arc<Mutex<dyn PedidoGateway + Sync + Send>>>,
-    produto_repository: &State<Arc<Mutex<dyn ProdutoGateway + Sync + Send>>>,
-    id: usize,
-    categoria: &str,
-    produto_id: usize,
-) -> Result<Json<Pedido>, Status> {
-    let pedido_controller = PedidoController::new(
-        pedido_repository.inner().clone(),
-        produto_repository.inner().clone(),
-    );
-    let pedido = pedido_controller
-        .atualiza_produto_by_categoria(id, categoria, produto_id)
-        .await?;
-
-    Ok(Json(pedido))
-}
 
 pub fn routes() -> Vec<rocket::Route> {
     openapi_get_routes![
         get_pedidos,
+        get_pedido_by_id,
         post_novo_pedido,
         get_pedidos_novos,
-        put_status_pedido,
-        put_produto_by_categoria,
+        put_status_pedido
     ]
 }
 

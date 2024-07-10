@@ -76,30 +76,4 @@ impl PedidoController {
             .atualiza_status(id, status)
             .await
     }
-
-    pub async fn atualiza_produto_by_categoria(
-        &self,
-        id: usize,
-        categoria: &str,
-        produto_id: usize,
-    ) -> Result<Pedido, DomainError> {
-        match categoria {
-            "Lanche" => {
-                self.pedidos_e_pagamentos_use_case
-                    .adicionar_lanche_com_personalizacao(id, produto_id)
-                    .await
-            }
-            "Acompanhamento" => {
-                self.pedidos_e_pagamentos_use_case
-                    .adicionar_acompanhamento(id, produto_id)
-                    .await
-            }
-            "Bebida" => {
-                self.pedidos_e_pagamentos_use_case
-                    .adicionar_bebida(id, produto_id)
-                    .await
-            }
-            _ => Err(DomainError::Invalid("Categoria inválida".to_string())),
-        }
-    }
 }

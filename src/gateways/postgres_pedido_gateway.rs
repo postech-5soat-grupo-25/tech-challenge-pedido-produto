@@ -9,7 +9,6 @@ use tokio_postgres::Client;
 use crate::base::domain_error::DomainError;
 use crate::entities::cpf::Cpf;
 use crate::entities::pedido::{Pedido, Status};
-use crate::entities::produto::Produto;
 use crate::traits::pedido_gateway::PedidoGateway;
 use crate::traits::produto_gateway::ProdutoGateway;
 
@@ -254,72 +253,6 @@ impl PedidoGateway for PostgresPedidoRepository {
             }
             Ok(None) => Err(DomainError::NotFound),
             Err(_) => Err(DomainError::Invalid("Pedido".to_string())),
-        }
-    }
-
-    async fn cadastrar_lanche(
-        &mut self,
-        pedido_id: usize,
-        lanche: Produto,
-    ) -> Result<Pedido, DomainError> {
-        let _pedido_id: i32 = pedido_id as i32;
-        let _lanche_id = *lanche.id() as i32;
-
-        let updated_pedido = self
-            .client
-            .query(SET_PEDIDO_LANCHE, &[&_pedido_id, &_lanche_id])
-            .await
-            .unwrap();
-
-        let updated_pedido = updated_pedido.get(0);
-        match updated_pedido {
-            Some(pedido) => Ok(self.pedido_from_proxy(&pedido).await),
-            None => Err(DomainError::NotFound),
-        }
-    }
-
-    async fn cadastrar_acompanhamento(
-        &mut self,
-        pedido_id: usize,
-        acompanhamento: Produto,
-    ) -> Result<Pedido, DomainError> {
-        let _pedido_id: i32 = pedido_id as i32;
-        let _acompanhamento_id = *acompanhamento.id() as i32;
-
-        let updated_pedido = self
-            .client
-            .query(
-                SET_PEDIDO_ACOMPANHAMENTO,
-                &[&_pedido_id, &_acompanhamento_id],
-            )
-            .await
-            .unwrap();
-
-        let updated_pedido = updated_pedido.get(0);
-        match updated_pedido {
-            Some(pedido) => Ok(self.pedido_from_proxy(&pedido).await),
-            None => Err(DomainError::NotFound),
-        }
-    }
-
-    async fn cadastrar_bebida(
-        &mut self,
-        pedido_id: usize,
-        bebida: Produto,
-    ) -> Result<Pedido, DomainError> {
-        let _pedido_id: i32 = pedido_id as i32;
-        let _bebida_id = *bebida.id() as i32;
-
-        let updated_pedido = self
-            .client
-            .query(SET_PEDIDO_BEBIDA, &[&_pedido_id, &_bebida_id])
-            .await
-            .unwrap();
-
-        let updated_pedido = updated_pedido.get(0);
-        match updated_pedido {
-            Some(pedido) => Ok(self.pedido_from_proxy(&pedido).await),
-            None => Err(DomainError::NotFound),
         }
     }
 }

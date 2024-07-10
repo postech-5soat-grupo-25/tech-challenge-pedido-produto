@@ -116,54 +116,69 @@ impl PedidoGateway for InMemoryPedidoRepository {
         }
         Err(DomainError::NotFound)
     }
-
-
-
-    async fn cadastrar_lanche(
-        &mut self,
-        pedido_id: usize,
-        lanche: Produto,
-    ) -> Result<Pedido, DomainError> {
-        let pedidos = &mut self._pedidos;
-        for pedido in pedidos.iter_mut() {
-            if *pedido.id() == pedido_id {
-                pedido.set_lanche(Some(lanche.clone()));
-                return Ok(pedido.clone());
-            }
-        }
-        Err(DomainError::NotFound)
-    }
-
-    async fn cadastrar_acompanhamento(
-        &mut self,
-        pedido_id: usize,
-        acompanhamento: Produto,
-    ) -> Result<Pedido, DomainError> {
-        let pedidos = &mut self._pedidos;
-        for pedido in pedidos.iter_mut() {
-            if *pedido.id() == pedido_id {
-                pedido.set_acompanhamento(Some(acompanhamento.clone()));
-                return Ok(pedido.clone());
-            }
-        }
-        Err(DomainError::NotFound)
-    }
-
-    async fn cadastrar_bebida(
-        &mut self,
-        pedido_id: usize,
-        bebida: Produto,
-    ) -> Result<Pedido, DomainError> {
-        let pedidos = &mut self._pedidos;
-        for pedido in pedidos.iter_mut() {
-            if *pedido.id() == pedido_id {
-                pedido.set_bebida(Some(bebida.clone()));
-                return Ok(pedido.clone());
-            }
-        }
-        Err(DomainError::NotFound)
-    }
 }
 
 unsafe impl Sync for InMemoryPedidoRepository {}
 unsafe impl Send for InMemoryPedidoRepository {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_initiates_pedidos() {
+        let mut pedido_repository = InMemoryPedidoRepository::new();
+
+        let pedidos = pedido_repository.lista_pedidos().await.unwrap();
+
+        assert_eq!(pedidos.len(), 1);
+
+        let pedido = pedido_repository.get_pedido_by_id(1).await.unwrap();
+
+        assert_eq!(pedido.id(), &1);
+    }
+
+    #[tokio::test]
+    async fn test_adds_and_retrieves() {
+        let mut pedido_repository = InMemoryPedidoRepository::new();
+
+        let lanche = Produto::new(
+            2,
+            "Cheeseburger".to_string(),
+            "cheeseburger.png".to_string(),
+            "O clássico pão, carne e queijo!".to_string(),
+            Categoria::Lanche,
+            9.99,
+            Ingredientes::new(vec![
+                "Pão".to_string(),
+                "Hambúrguer".to_string(),
+                "Queijo".to_string(),
+            ])
+            .unwrap(),
+            "2024-01-17".to_string(),
+            "2024-01-17".to_string(),
+        );
+
+        let pedido = Pedido::new(
+            2,
+            Some(Cpf::new("000.000.000-00".to_string()).unwrap()),
+            Some(lanche),
+            None,
+            None,
+            "mercadopago".to_string(),
+            Status::Pendente,
+            "2024-01-17".to_string(),
+            "2024-01-17".to_string(),
+        );
+
+        pedido_repository.create_pedido(pedido.clone()).await.unwrap();
+
+        let pedidos = pedido_repository.lista_pedidos().await.unwrap();
+
+        assert_eq!(pedidos.len(), 2);
+
+        let pedido = pedido_repository.get_pedido_by_id(2).await.unwrap();
+
+        assert_eq!(pedido.id(), &2);
+    }
+}

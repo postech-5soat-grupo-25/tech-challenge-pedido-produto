@@ -49,3 +49,38 @@ pub trait ProdutoGateway {
 
   async fn delete_produto(&mut self, id: usize) -> Result<(), DomainError>;
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[tokio::test]
+  async fn test_categoria_from_string() {
+      let categoria = Categoria::from_str("Lanche").unwrap();
+      assert_eq!(categoria, Categoria::Lanche);
+
+      let categoria = Categoria::from_str("Acompanhamento").unwrap();
+      assert_eq!(categoria, Categoria::Acompanhamento);
+
+      let categoria = Categoria::from_str("Bebida").unwrap();
+      assert_eq!(categoria, Categoria::Bebida);
+
+      let categoria = Categoria::from_str("Sobremesa").unwrap();
+      assert_eq!(categoria, Categoria::Sobremesa);
+  }
+
+  #[tokio::test]
+  async fn test_categoria_to_string() {
+      let categoria = Categoria::Lanche;
+      assert_eq!(categoria.to_string(), "Lanche");
+
+      let categoria = Categoria::Acompanhamento;
+      assert_eq!(categoria.to_string(), "Acompanhamento");
+
+      let categoria = Categoria::Bebida;
+      assert_eq!(categoria.to_string(), "Bebida");
+
+      let categoria = Categoria::Sobremesa;
+      assert_eq!(categoria.to_string(), "Sobremesa");
+  }
+}
