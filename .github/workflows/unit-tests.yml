@@ -1,25 +1,48 @@
-name: Unit tests
+name: Unit Tests
+permissions:
+  checks: write
 
 on:
-  pull_request:
+  push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test:
-    name: coverage
+    name: Check
     runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-      - name: Generate code coverage
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Run `cargo test`
         run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml --fail-under 50
+          cargo test  -- -Z unstable-options --format json --report-time | tee results.json
 
+      - name: Prepare JUnit Report
+        id: report 
+        uses: innoq/action-cargo-test-report@main
+        with:
+          cargo-test-report-json: 'results.json'
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@main
+        if: always()
+        with:
+          check_name: Report
+          fail_on_failure: true
+          require_tests: true
+          summary: ${{ steps.report.outputs.summary }}

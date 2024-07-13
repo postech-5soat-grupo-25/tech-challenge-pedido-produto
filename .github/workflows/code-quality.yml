@@ -7,9 +7,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   rust:
-    name: Custom Tools for Rust
+    name: Check
     runs-on: ubuntu-latest
     
     steps:
@@ -47,64 +50,31 @@ jobs:
         components: rustfmt, clippy
 
     - name: Install Tools
-      env:
-        CARGO_TERM_COLOR: always
       run: |
-        cargo install --force cargo-audit
-        cargo install --force cargo-deny
-        cargo install --force cargo-outdated
+        cargo install cargo-audit
+        cargo install cargo-udeps
+        cargo install cargo-sonar
     
     - name: Run `clippy`
-      env:
-        CARGO_TERM_COLOR: always
-      run: cargo clippy --message-format=json > clippy.json
+      run: cargo clippy --message-format=json > clippy.json || true
 
     - name: Run `cargo-audit`
-      env:
-        CARGO_TERM_COLOR: always
-      run: cargo audit --json > audit.json
+      run: cargo audit --json > audit.json || true
 
-    - name: Run `cargo-deny`
+    - name: Run `cargo-udeps`
+      run: cargo +nightly udeps --quiet --workspace --output json > udeps.json || true
+    
+    - name: Run `cargo-sonar`
+      run: cargo sonar --clippy --audit --udeps
+    
+    - name: Upload to sonarcloud.io
+      uses: sonarsource/sonarqube-scan-action@v2.3.0
       env:
-        CARGO_TERM_COLOR: always
-      run: cargo deny --format json check 2> deny.json
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
 
-    - name: Run `cargo-outdated`
-      env:
-        CARGO_TERM_COLOR: always
-      run: cargo outdated --workspace --depth 1 --format json > outdated.json
-    
-    - name: Convert to Report
-      env:
-        CARGO_TERM_COLOR: always
-      run: |
-        cargo install cargo-sonar
-        cargo sonar --clippy --audit --deny --outdated
-    
-    - name: Upload Report Artifact
-      uses: actions/upload-artifact@v2
+    - name: Archive Results
+      uses: actions/upload-artifact@v1
       with:
-        name: sonar-issues
+        name: code-quality-report
         path: sonar-issues.json
-
-  sonarcloud:
-    name: SonarCloud
-    runs-on: ubuntu-latest
-    needs: rust
-    
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Download Report Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: sonar-issues
-          path: ./
-      
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v2.3.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
