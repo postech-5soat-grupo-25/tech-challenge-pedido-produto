@@ -1,0 +1,110 @@
+name: Code Quality
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  rust:
+    name: Custom Tools for Rust
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Cache `cargo` Registry
+      uses: actions/cache@v2
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache `cargo` Index
+      uses: actions/cache@v2
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-index-
+
+    - name: Cache `cargo` Build
+      uses: actions/cache@v2
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-build-
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+        components: rustfmt, clippy
+
+    - name: Install Tools
+      env:
+        CARGO_TERM_COLOR: always
+      run: |
+        cargo install --force cargo-audit
+        cargo install --force cargo-deny
+        cargo install --force cargo-outdated
+    
+    - name: Run `clippy`
+      env:
+        CARGO_TERM_COLOR: always
+      run: cargo clippy --message-format=json > clippy.json
+
+    - name: Run `cargo-audit`
+      env:
+        CARGO_TERM_COLOR: always
+      run: cargo audit --json > audit.json
+
+    - name: Run `cargo-deny`
+      env:
+        CARGO_TERM_COLOR: always
+      run: cargo deny --format json check 2> deny.json
+
+    - name: Run `cargo-outdated`
+      env:
+        CARGO_TERM_COLOR: always
+      run: cargo outdated --workspace --depth 1 --format json > outdated.json
+    
+    - name: Convert to Report
+      env:
+        CARGO_TERM_COLOR: always
+      run: |
+        cargo install cargo-sonar
+        cargo sonar --clippy --audit --deny --outdated
+    
+    - name: Upload Report Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: sonar-issues
+        path: sonar-issues.json
+
+  sonarcloud:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    needs: rust
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download Report Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: sonar-issues
+          path: ./
+      
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v2.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
