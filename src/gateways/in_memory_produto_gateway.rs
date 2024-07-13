@@ -104,8 +104,9 @@ impl ProdutoGateway for InMemoryProdutoRepository {
         let mut produto_list = self._produto.clone();
         for produto in &mut produto_list.iter_mut() {
         if produto.id() == new_produto_data.id() {
-            *produto = new_produto_data.clone();
-            return Ok(produto.clone());
+            self.delete_produto(produto.id().to_owned()).await.unwrap();
+            self.create_produto(new_produto_data.clone()).await.unwrap();
+            return Ok(new_produto_data.clone());
         }
         }
         Err(DomainError::NotFound)
@@ -120,5 +121,152 @@ impl ProdutoGateway for InMemoryProdutoRepository {
             }
         }
         Err(DomainError::NotFound)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_initiates_produtos() {
+        let produto_repository = InMemoryProdutoRepository::new();
+
+        let produtos = produto_repository.get_produtos().await.unwrap();
+
+        assert_eq!(produtos.len(), 1);
+
+        let produto = produto_repository.get_produto_by_id(0).await.unwrap();
+
+        assert_eq!(produto.id(), &0);
+    }
+
+    #[tokio::test]
+    async fn test_adds_and_retrieves() {
+        let mut produto_repository = InMemoryProdutoRepository::new();
+
+        let categoria = Categoria::Lanche;
+
+        let ingredientes = Ingredientes::new(vec![
+            String::from("Carne"),
+            String::from("Pao"),
+            String::from("Alface"),
+        ]).unwrap();
+
+        let produto = Produto::new(
+            1,
+            "Hamburguer".to_string(),
+            "hamburguer.png".to_string(),
+            "hamburguer com uma carne e salada".to_string(),
+            categoria,
+            15.99,
+            ingredientes,
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
+        );
+
+        let produto = produto_repository.create_produto(produto).await.unwrap();
+
+        assert_eq!(produto.id(), &1);
+
+        let produtos = produto_repository.get_produtos().await.unwrap();
+
+        assert_eq!(produtos.len(), 2);
+
+        let produto = produto_repository.get_produto_by_id(1).await.unwrap();
+
+        assert_eq!(produto.id(), &1);
+    }
+
+    #[tokio::test]
+    async fn test_update() {
+        let mut produto_repository = InMemoryProdutoRepository::new();
+
+        let mut produto = produto_repository.get_produto_by_id(0).await.unwrap();
+
+        produto.set_categoria(Categoria::Bebida);
+
+        let produto = produto_repository.update_produto(produto).await.unwrap();
+
+        assert_eq!(produto.categoria(), &Categoria::Bebida);
+
+        let produto = produto_repository.get_produto_by_id(0).await.unwrap();
+
+        assert_eq!(produto.categoria(), &Categoria::Bebida);
+    }
+
+    #[tokio::test]
+    async fn test_deletes() {
+        let mut produto_repository = InMemoryProdutoRepository::new();
+
+        let categoria = Categoria::Lanche;
+
+        let ingredientes = Ingredientes::new(vec![
+            String::from("Carne"),
+            String::from("Pao"),
+            String::from("Alface"),
+        ]).unwrap();
+
+        let produto = Produto::new(
+            1,
+            "Hamburguer".to_string(),
+            "hamburguer.png".to_string(),
+            "hamburguer com uma carne e salada".to_string(),
+            categoria,
+            15.99,
+            ingredientes,
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
+        );
+
+        produto_repository.create_produto(produto).await.unwrap();
+
+        produto_repository.delete_produto(0).await.unwrap();
+
+        let produtos = produto_repository.get_produtos().await.unwrap();
+
+        assert_eq!(produtos.len(), 1);
+        assert_eq!(produtos[0].id(), &1);
+    }
+
+    #[tokio::test]
+    async fn test_get_produtos_by_categoria() {
+        let mut produto_repository = InMemoryProdutoRepository::new();
+
+        let categoria = Categoria::Sobremesa;
+
+        let ingredientes = Ingredientes::new(vec![
+            String::from("Carne"),
+            String::from("Pao"),
+            String::from("Alface"),
+        ]).unwrap();
+
+        let produto = Produto::new(
+            1,
+            "Hamburguer".to_string(),
+            "hamburguer.png".to_string(),
+            "hamburguer com uma carne e salada".to_string(),
+            categoria,
+            15.99,
+            ingredientes,
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
+        );
+
+        produto_repository.create_produto(produto).await.unwrap();
+
+        let produtos = produto_repository.get_produtos_by_categoria(Categoria::Lanche).await.unwrap();
+
+        assert_eq!(produtos.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_produtos_by_categoria_not_found() {
+        let produto_repository = InMemoryProdutoRepository::new();
+
+        let produtos = produto_repository.get_produtos_by_categoria(Categoria::Bebida).await.unwrap();
+
+        assert_eq!(produtos.len(), 0);
     }
 }

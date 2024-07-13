@@ -51,7 +51,7 @@ mod tests {
             None,
             None,
             None,
-            "id_pagamento".to_string(),
+            Some("id_pagamento".to_string()),
             Status::Pendente,
             "2021-10-10".to_string(),
             "2021-10-10".to_string()
@@ -78,7 +78,7 @@ mod tests {
             None,
             None,
             None,
-            "id_pagamento".to_string(),
+            Some("id_pagamento".to_string()),
             Status::EmPreparacao,
             "2021-10-10".to_string(),
             "2021-10-10".to_string()

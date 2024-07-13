@@ -1,15 +1,12 @@
-use std::error::Error;
-use std::sync::Arc;
 use bytes::BytesMut;
 use postgres_from_row::FromRow;
-use tokio_postgres::Client;
+use std::error::Error;
+use std::sync::Arc;
 use tokio_postgres::types::{FromSql, ToSql, Type};
-
+use tokio_postgres::Client;
 
 use crate::{
-    base::domain_error::DomainError, 
-    entities::produto::Categoria, 
-    entities::produto::Produto,
+    base::domain_error::DomainError, entities::produto::Categoria, entities::produto::Produto,
     traits::produto_gateway::ProdutoGateway,
 };
 
@@ -26,7 +23,6 @@ const QUERY_PRODUCTS: &str = "SELECT id, nome, foto, descricao, CAST(categoria A
 const QUERY_PRODUCT_BY_CATEGORIA: &str = "SELECT id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao FROM produto WHERE categoria = $1";
 const UPDATE_PRODUCT: &str = "UPDATE produto SET nome = $1, foto = $2, descricao = $3, categoria = $4, preco = $5, ingredientes = $6, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $7 RETURNING id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao";
 const DELETE_PRODUCT: &str = "DELETE FROM produto WHERE id = $1 RETURNING RETURNING id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao";
-
 
 impl<'a> FromSql<'a> for Categoria {
     fn from_sql(
@@ -77,7 +73,6 @@ impl ToSql for Categoria {
         self.to_sql(ty, out)
     }
 }
-
 
 impl PostgresProdutoRepository {
     pub async fn new(client: Arc<Client>, tables: Vec<Table>) -> Self {
@@ -144,7 +139,7 @@ impl ProdutoGateway for PostgresProdutoRepository {
                     &produto.descricao(),
                     &produto.categoria(),
                     &produto.preco(),
-                    &ingredientes_vec
+                    &ingredientes_vec,
                 ],
             )
             .await

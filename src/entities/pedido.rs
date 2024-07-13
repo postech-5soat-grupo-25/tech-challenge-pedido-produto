@@ -27,7 +27,7 @@ pub struct Pedido {
     lanche: Option<Produto>,
     acompanhamento: Option<Produto>,
     bebida: Option<Produto>,
-    pagamento: String,
+    pagamento: Option<String>,
     status: Status,
     data_criacao: String,
     data_atualizacao: String,
@@ -40,7 +40,7 @@ impl Pedido {
         lanche: Option<Produto>,
         acompanhamento: Option<Produto>,
         bebida: Option<Produto>,
-        pagamento: String,
+        pagamento: Option<String>,
         status: Status,
         data_criacao: String,
         data_atualizacao: String,
@@ -66,19 +66,6 @@ impl Pedido {
             ));
         };
 
-        match self.status {
-            Status::EmPreparacao
-            | Status::Pago
-            | Status::Pronto
-            | Status::Pendente
-            | Status::Finalizado
-            | Status::Cancelado => (),
-            _ => {
-                return Err(DomainError::Invalid(
-                    "Status do Pedido é inválido".to_string(),
-                ))
-            }
-        };
         assertion_concern::assert_argument_timestamp_format(self.data_criacao.clone())?;
         assertion_concern::assert_argument_timestamp_format(self.data_atualizacao.clone())?;
         Ok(())
@@ -105,8 +92,8 @@ impl Pedido {
         self.bebida.as_ref()
     }
 
-    pub fn pagamento(&self) -> &String {
-        &self.pagamento
+    pub fn pagamento(&self) -> Option<&String> {
+        self.pagamento.as_ref()
     }
 
     pub fn status(&self) -> &Status {
@@ -121,56 +108,7 @@ impl Pedido {
         &self.data_atualizacao
     }
 
-    pub fn valor(&self) -> f64 {
-        let mut total = 0.0;
-
-        if let Some(lanche) = &self.lanche {
-            total += lanche.preco();
-        }
-
-        if let Some(acompanhamento) = &self.acompanhamento {
-            total += acompanhamento.preco();
-        }
-
-        if let Some(bebida) = &self.bebida {
-            total += bebida.preco();
-        }
-
-        total
-    }
-
-    // Setters
-    pub fn set_cliente(&mut self, cliente: Option<Cpf>) {
-        self.cliente = cliente;
-    }
-
-    pub fn set_lanche(&mut self, lanche: Option<Produto>) {
-        self.lanche = lanche;
-    }
-
-    pub fn set_acompanhamento(&mut self, acompanhamento: Option<Produto>) {
-        self.acompanhamento = acompanhamento;
-    }
-
-    pub fn set_bebida(&mut self, bebida: Option<Produto>) {
-        self.bebida = bebida;
-    }
-
-    pub fn set_pagamento(&mut self, pagamento: String) {
-        self.pagamento = pagamento;
-    }
-
-    pub fn set_status(&mut self, status: Status) {
-        self.status = status;
-    }
-
-    pub fn set_data_atualizacao(&mut self, data_atualizacao: String) -> Result<(), DomainError> {
-        assertion_concern::assert_argument_timestamp_format(data_atualizacao.clone())?;
-        self.data_atualizacao = data_atualizacao;
-        Ok(())
-    }
-
-    pub fn get_total_valor_pedido(&self) -> f64 {
+    pub fn valor_total(&self) -> f64 {
         let valor_lanche = match self.lanche() {
             Some(produto) => produto.preco(),
             None => 0.0,
@@ -188,6 +126,21 @@ impl Pedido {
 
         valor_lanche + valor_bebida + valor_acompanhamento
     }
+
+    // Setters
+    pub fn set_pagamento(&mut self, pagamento: String) {
+        self.pagamento = Some(pagamento);
+    }
+
+    pub fn set_status(&mut self, status: Status) {
+        self.status = status;
+    }
+
+    pub fn set_data_atualizacao(&mut self, data_atualizacao: String) -> Result<(), DomainError> {
+        assertion_concern::assert_argument_timestamp_format(data_atualizacao.clone())?;
+        self.data_atualizacao = data_atualizacao;
+        Ok(())
+    }
 }
 
 // Unit Tests
@@ -197,16 +150,15 @@ mod tests {
     use crate::entities::ingredientes::Ingredientes;
     use crate::entities::produto::Categoria;
     use crate::entities::produto::Produto;
-    use chrono::Utc;
 
-    fn create_valid_produto() -> Produto {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
+    fn create_valid_produto(categoria: Categoria) -> Produto {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
         Produto::new(
             1,
             "Cheeseburger".to_string(),
             "cheeseburger.png".to_string(),
             "O clássico pão, carne e queijo!".to_string(),
-            Categoria::Lanche,
+            categoria,
             9.99,
             Ingredientes::new(vec![
                 "Pão".to_string(),
@@ -220,16 +172,16 @@ mod tests {
     }
 
     fn create_valid_pedido() -> Pedido {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
         let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
-        let produto = create_valid_produto();
+        let produto = create_valid_produto(Categoria::Lanche);
         Pedido::new(
             1,
             Some(cliente),
             Some(produto),
             None,
             None,
-            "Cartão de Crédito".to_string(),
+            None,
             Status::Pendente,
             _now.clone(),
             _now,
@@ -243,8 +195,11 @@ mod tests {
         assert!(pedido.lanche().is_some());
         assert!(pedido.acompanhamento().is_none());
         assert!(pedido.bebida().is_none());
-        assert_eq!(pedido.pagamento(), "Cartão de Crédito");
+        assert_eq!(pedido.pagamento(), None);
         assert_eq!(pedido.status(), &Status::Pendente);
+        assert_eq!(pedido.cliente().unwrap().get_string(), "12345678909".to_string());
+        assert_eq!(pedido.data_criacao(), &"2021-08-01 00:00:00.000+0000".to_string());
+        assert_eq!(pedido.data_atualizacao(), &"2021-08-01 00:00:00.000+0000".to_string());
     }
 
     #[test]
@@ -255,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_pedido_validate_entity_no_items() {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
         let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
         let pedido = Pedido::new(
             1,
@@ -263,7 +218,7 @@ mod tests {
             None,
             None,
             None,
-            "Mercado Pago".to_string(),
+            None,
             Status::Pendente,
             _now.clone(),
             _now,
@@ -285,5 +240,124 @@ mod tests {
             "Esperado Err(DomainError::Invalid), obtido {:?}",
             result
         );
+    }
+
+    #[test]
+    fn test_pedido_invalid_creation_date() {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
+        let pedido = Pedido::new(
+            1,
+            Some(cliente),
+            None,
+            None,
+            None,
+            None,
+            Status::Pendente,
+            "18-02-2024".to_string(),
+            _now,
+        );
+        let result = pedido.validate_entity();
+        assert!(
+            matches!(result, Err(DomainError::Invalid(_))),
+            "Esperado Err(DomainError::Invalid), obtido {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_pedido_invalid_update_date() {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
+        let pedido = Pedido::new(
+            1,
+            Some(cliente),
+            None,
+            None,
+            None,
+            None,
+            Status::Pendente,
+            _now,
+            "18-02-2024".to_string(),
+        );
+        let result = pedido.validate_entity();
+        assert!(
+            matches!(result, Err(DomainError::Invalid(_))),
+            "Esperado Err(DomainError::Invalid), obtido {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_soma_valor_total_pedido() {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
+        let lanche = create_valid_produto(Categoria::Lanche);
+        let acompanhamento = create_valid_produto(Categoria::Acompanhamento);
+        let bebida = create_valid_produto(Categoria::Bebida);
+        let pedido = Pedido::new(
+            1,
+            Some(cliente),
+            Some(lanche),
+            Some(acompanhamento),
+            Some(bebida),
+            None,
+            Status::Pendente,
+            _now.clone(),
+            _now,
+        );
+        assert_eq!(pedido.valor_total(), 29.97);
+    }
+
+    #[test]
+    fn test_soma_valor_total_pedido_apenas_lanche() {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
+        let lanche = create_valid_produto(Categoria::Lanche);
+        let pedido = Pedido::new(
+            1,
+            Some(cliente),
+            Some(lanche),
+            None,
+            None,
+            None,
+            Status::Pendente,
+            _now.clone(),
+            _now,
+        );
+        assert_eq!(pedido.valor_total(), 9.99);
+    }
+
+    #[test]
+    fn test_pedido_set_pagamento() {
+        let mut pedido = create_valid_pedido();
+
+        assert_eq!(pedido.pagamento(), None);
+
+        pedido.set_pagamento("pagamento_uuid".to_string());
+
+        assert_eq!(pedido.pagamento(), Some(&"pagamento_uuid".to_string()));
+    }
+
+    #[test]
+    fn test_pedido_set_status() {
+        let mut pedido = create_valid_pedido();
+
+        assert_eq!(pedido.pagamento(), None);
+
+        pedido.set_status(Status::Pago);
+
+        assert_eq!(pedido.status(), &Status::Pago);
+    }
+
+    #[test]
+    fn test_pedido_set_data_atualizacao() {
+        let mut pedido = create_valid_pedido();
+
+        assert_eq!(pedido.data_atualizacao(), &"2021-08-01 00:00:00.000+0000".to_string());
+
+        pedido.set_data_atualizacao("2021-10-01 00:00:00.000+0000".to_string()).unwrap();
+
+        assert_eq!(pedido.data_atualizacao(), &"2021-10-01 00:00:00.000+0000".to_string());
     }
 }

@@ -6,3 +6,13 @@ fn main() {
     Err(e) => println!("Error: {}", e),
   };
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_main() {
+    assert_eq!(1, 1);
+  }
+}

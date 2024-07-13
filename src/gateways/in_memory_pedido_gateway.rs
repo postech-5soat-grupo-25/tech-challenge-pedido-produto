@@ -42,7 +42,7 @@ impl InMemoryPedidoRepository {
             Some(lanche),
             None,
             None,
-            "mercadopago".to_string(),
+            None,
             Status::Pendente,
             current_date.clone(),
             current_date.clone(),
@@ -55,19 +55,6 @@ impl InMemoryPedidoRepository {
             _pedidos: vec![pedido],
         }
     }
-}
-
-async fn get_status_by_string(status: String) -> Status {
-    let mut status_enum: Status = Status::Pendente;
-    match status.as_str() {
-        "pendente" => status_enum = Status::Pendente,
-        "em_preparacao" => status_enum = Status::EmPreparacao,
-        "pronto" => status_enum = Status::Pronto,
-        "finalizado" => status_enum = Status::Finalizado,
-        "set_pedido_cancelado" => status_enum = Status::Cancelado,
-        &_ => status_enum = Status::Invalido,
-    };
-    return status_enum;
 }
 
 #[async_trait]
@@ -165,8 +152,8 @@ mod tests {
             Some(lanche),
             None,
             None,
-            "mercadopago".to_string(),
-            Status::Pendente,
+            Some("mercadopago".to_string()),
+            Status::EmPreparacao,
             "2024-01-17".to_string(),
             "2024-01-17".to_string(),
         );
@@ -180,5 +167,58 @@ mod tests {
         let pedido = pedido_repository.get_pedido_by_id(2).await.unwrap();
 
         assert_eq!(pedido.id(), &2);
+    }
+
+    #[tokio::test]
+    async fn test_get_pedidos_novos() {
+        let mut pedido_repository = InMemoryPedidoRepository::new();
+
+        let lanche = Produto::new(
+            2,
+            "Cheeseburger".to_string(),
+            "cheeseburger.png".to_string(),
+            "O clássico pão, carne e queijo!".to_string(),
+            Categoria::Lanche,
+            9.99,
+            Ingredientes::new(vec![
+                "Pão".to_string(),
+                "Hambúrguer".to_string(),
+                "Queijo".to_string(),
+            ])
+            .unwrap(),
+            "2024-01-17".to_string(),
+            "2024-01-17".to_string(),
+        );
+
+        let pedido = Pedido::new(
+            2,
+            Some(Cpf::new("000.000.000-00".to_string()).unwrap()),
+            Some(lanche),
+            None,
+            None,
+            Some("mercadopago".to_string()),
+            Status::EmPreparacao,
+            "2024-01-17".to_string(),
+            "2024-01-17".to_string(),
+        );
+
+        pedido_repository.create_pedido(pedido.clone()).await.unwrap();
+
+        let pedidos_novos = pedido_repository.get_pedidos_novos().await.unwrap();
+
+        assert_eq!(pedidos_novos.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_atualiza_status() {
+        let mut pedido_repository = InMemoryPedidoRepository::new();
+
+        let pedido = pedido_repository.get_pedido_by_id(1).await.unwrap();
+
+        assert_eq!(pedido.status(), &Status::Pendente);
+
+        let pedido = pedido_repository.atualiza_status(1, Status::EmPreparacao).await.unwrap();
+
+        assert_eq!(pedido.status(), &Status::EmPreparacao);
     }
 }

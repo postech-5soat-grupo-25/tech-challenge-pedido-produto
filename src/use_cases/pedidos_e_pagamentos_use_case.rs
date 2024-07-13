@@ -15,10 +15,10 @@ use tokio::sync::Mutex;
 
 #[derive(Clone, Debug, Deserialize, JsonSchema)]
 pub struct CreatePedidoInput {
-    cliente_id: Option<Cpf>,
-    lanche_id: Option<usize>,
-    acompanhamento_id: Option<usize>,
-    bebida_id: Option<usize>,
+    pub cliente_id: Option<Cpf>,
+    pub lanche_id: Option<usize>,
+    pub acompanhamento_id: Option<usize>,
+    pub bebida_id: Option<usize>,
 }
 
 #[derive(Clone)]
@@ -80,7 +80,7 @@ impl PedidosEPagamentosUseCase {
             lanche,
             acompanhamento,
             bebida,
-            String::from("Mercado Pago"),
+            None,
             Status::Pendente,
             _now.clone(),
             _now.clone(),
@@ -116,7 +116,7 @@ mod tests {
             None,
             None,
             None,
-            "id_pagamento".to_string(),
+            Some("id_pagamento".to_string()),
             Status::Pendente,
             "2021-10-10".to_string(),
             "2021-10-10".to_string(),
@@ -146,7 +146,7 @@ mod tests {
             None,
             None,
             None,
-            "id_pagamento".to_string(),
+            Some("id_pagamento".to_string()),
             Status::Pendente,
             "2021-10-10".to_string(),
             "2021-10-10".to_string(),
@@ -176,7 +176,7 @@ mod tests {
             None,
             None,
             None,
-            "id_pagamento".to_string(),
+            Some("id_pagamento".to_string()),
             Status::Pendente,
             "2021-10-10".to_string(),
             "2021-10-10".to_string(),

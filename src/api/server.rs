@@ -98,3 +98,20 @@ pub async fn main() -> Result<(), rocket::Error> {
     println!("Server running on {}", config.env.to_string());
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::local::blocking::Client;
+    use rocket::http::Status;
+
+    #[test]
+    fn test_redirect_to_docs() {
+        let rocket = rocket::build().mount("/", routes![redirect_to_docs]);
+        let client = Client::tracked(rocket).expect("valid rocket instance");
+        let response = client.get("/").dispatch();
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/docs"));
+    }
+}

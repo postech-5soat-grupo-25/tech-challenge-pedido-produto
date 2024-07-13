@@ -155,7 +155,7 @@ impl PostgresPedidoRepository {
             lanche,
             acompanhamento,
             bebida,
-            _pedido.pagamento().clone(),
+            Some(_pedido.pagamento().clone()),
             _pedido.status().clone(),
             _pedido.data_criacao().clone(),
             _pedido.data_atualizacao().clone(),
@@ -205,7 +205,7 @@ impl PedidoGateway for PostgresPedidoRepository {
 
     async fn create_pedido(&mut self, pedido: Pedido) -> Result<Pedido, DomainError> {
         let cliente_id = match pedido.cliente() {
-            Some(cliente) => cliente.get_only_number_string(),
+            Some(cliente) => cliente.get_string(),
             None => "".to_string(),
         };
         let lanche_id = pedido.lanche().map(|lanche| *lanche.id() as i32);
