@@ -65,17 +65,6 @@ impl ProdutoGateway for InMemoryProdutoRepository {
         Err(DomainError::NotFound)
     }
 
-    async fn get_produtos_by_categoria(&self, categoria: Categoria) -> Result<Vec<Produto>, DomainError> {
-        sleep(Duration::from_secs(1)).await;
-        let mut produtos = Vec::new();
-        for produto in &self._produto {
-            if produto.categoria().to_owned() == categoria {
-                produtos.push(produto.clone());
-            }
-        }
-        Ok(produtos)
-    }
-
     async fn create_produto(&mut self, produto: Produto) -> Result<Produto, DomainError> {
         let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
 
@@ -228,45 +217,5 @@ mod tests {
 
         assert_eq!(produtos.len(), 1);
         assert_eq!(produtos[0].id(), &1);
-    }
-
-    #[tokio::test]
-    async fn test_get_produtos_by_categoria() {
-        let mut produto_repository = InMemoryProdutoRepository::new();
-
-        let categoria = Categoria::Sobremesa;
-
-        let ingredientes = Ingredientes::new(vec![
-            String::from("Carne"),
-            String::from("Pao"),
-            String::from("Alface"),
-        ]).unwrap();
-
-        let produto = Produto::new(
-            1,
-            "Hamburguer".to_string(),
-            "hamburguer.png".to_string(),
-            "hamburguer com uma carne e salada".to_string(),
-            categoria,
-            15.99,
-            ingredientes,
-            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
-            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string(),
-        );
-
-        produto_repository.create_produto(produto).await.unwrap();
-
-        let produtos = produto_repository.get_produtos_by_categoria(Categoria::Lanche).await.unwrap();
-
-        assert_eq!(produtos.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_get_produtos_by_categoria_not_found() {
-        let produto_repository = InMemoryProdutoRepository::new();
-
-        let produtos = produto_repository.get_produtos_by_categoria(Categoria::Bebida).await.unwrap();
-
-        assert_eq!(produtos.len(), 0);
     }
 }

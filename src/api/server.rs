@@ -13,7 +13,7 @@ use crate::external::postgres;
 use crate::gateways::in_memory_pedido_gateway::InMemoryPedidoRepository;
 use crate::gateways::in_memory_produto_gateway::InMemoryProdutoRepository;
 use crate::gateways::{
-    postgres_pedido_gateway::PostgresPedidoRepository,
+    postgres_pedido_gateway::PostgresPedidoGateway,
     postgres_produto_gateway::PostgresProdutoRepository,
 };
 use crate::traits::{pedido_gateway::PedidoGateway, produto_gateway::ProdutoGateway};
@@ -42,6 +42,8 @@ pub async fn main() -> Rocket<Build> {
                 Arc::new(Mutex::new(InMemoryPedidoRepository::new())),
             )
         } else {
+            print!("Connecting to database...");
+            print!("Database URL: {}", config.db_url);
             let postgres_connection_manager =
                 postgres::PgConnectionManager::new(config.db_url.clone())
                     .await
@@ -56,7 +58,7 @@ pub async fn main() -> Rocket<Build> {
             ));
 
             let pedido_repository = Arc::new(Mutex::new(
-                PostgresPedidoRepository::new(
+                PostgresPedidoGateway::new(
                     postgres_client.clone(),
                     tables,
                     produto_repository.clone(),

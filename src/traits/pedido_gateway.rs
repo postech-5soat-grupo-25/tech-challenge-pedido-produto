@@ -1,10 +1,7 @@
 use mockall::*;
 
 use crate::base::domain_error::DomainError;
-use crate::entities::{
-    pedido::{Pedido, Status},
-    produto::Produto,
-};
+use crate::entities::pedido::{Pedido, Status};
 use std::fmt;
 use std::str::FromStr;
 

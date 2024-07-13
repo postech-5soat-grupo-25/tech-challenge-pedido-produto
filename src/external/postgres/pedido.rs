@@ -20,7 +20,7 @@ pub fn get_pedido_table_columns() -> HashMap<String, (ColumnTypes, ColumnNullabl
         ),
     );
     columns.insert(
-        "cliente_id".to_string(),
+        "cliente".to_string(),
         (
             ColumnTypes::Char(11),
             ColumnNullable(true),
@@ -91,7 +91,7 @@ pub fn get_pedido_table_columns() -> HashMap<String, (ColumnTypes, ColumnNullabl
 #[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ProxyPedido {
     id: usize,
-    cliente_id: Option<String>,
+    cliente: Option<String>,
     lanche_id: Option<usize>,
     acompanhamento_id: Option<usize>,
     bebida_id: Option<usize>,
@@ -104,7 +104,7 @@ pub struct ProxyPedido {
 impl ProxyPedido {
     pub fn new(
         id: usize,
-        cliente_id: Option<String>,
+        cliente: Option<String>,
         lanche_id: Option<usize>,
         acompanhamento_id: Option<usize>,
         bebida_id: Option<usize>,
@@ -115,7 +115,7 @@ impl ProxyPedido {
     ) -> Self {
         ProxyPedido {
             id,
-            cliente_id,
+            cliente,
             lanche_id,
             acompanhamento_id,
             bebida_id,
@@ -130,8 +130,8 @@ impl ProxyPedido {
         &self.id
     }
 
-    pub fn cliente_id(&self) -> Option<&String> {
-        self.cliente_id.as_ref()
+    pub fn cliente(&self) -> Option<&String> {
+        self.cliente.as_ref()
     }
 
     pub fn lanche_id(&self) -> Option<&usize> {
@@ -166,7 +166,7 @@ impl ProxyPedido {
 impl FromRow for ProxyPedido {
     fn from_row(row: &tokio_postgres::Row) -> Self {
         let id: i32 = row.get("id");
-        let cliente_id: Option<String> = row.get("cliente_id");
+        let cliente: Option<String> = row.get("cliente");
         let lanche_id: Option<i32> = row.get("lanche_id");
         let acompanhamento_id: Option<i32> = row.get("acompanhamento_id");
         let bebida_id: Option<i32> = row.get("bebida_id");
@@ -177,7 +177,7 @@ impl FromRow for ProxyPedido {
 
     ProxyPedido::new(
             id as usize,
-            cliente_id,
+            cliente,
             lanche_id.map(|id| id as usize),
             acompanhamento_id.map(|id| id as usize),
             bebida_id.map(|id| id as usize),
@@ -190,7 +190,7 @@ impl FromRow for ProxyPedido {
 
     fn try_from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
         let id: i32 = row.try_get("id")?;
-        let cliente_id: Option<String> = row.try_get("cliente_id")?;
+        let cliente: Option<String> = row.try_get("cliente")?;
         let lanche_id: Option<i32> = row.try_get("lanche_id")?;
         let acompanhamento_id: Option<i32> = row.try_get("acompanhamento_id")?;
         let bebida_id: Option<i32> = row.try_get("bebida_id")?;
@@ -202,7 +202,7 @@ impl FromRow for ProxyPedido {
 
         Ok(ProxyPedido::new(
             id as usize,
-            cliente_id,
+            cliente,
             lanche_id.map(|id| id as usize),
             acompanhamento_id.map(|id| id as usize),
             bebida_id.map(|id| id as usize),

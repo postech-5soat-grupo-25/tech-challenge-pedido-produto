@@ -20,9 +20,8 @@ pub struct PostgresProdutoRepository {
 const CREATE_PRODUCT: &str = "INSERT INTO produto (nome, foto, descricao, categoria, preco, ingredientes, data_criacao, data_atualizacao) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao";
 const QUERY_PRODUCT_BY_ID: &str = "SELECT id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao FROM produto WHERE id = $1";
 const QUERY_PRODUCTS: &str = "SELECT id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao FROM produto";
-const QUERY_PRODUCT_BY_CATEGORIA: &str = "SELECT id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao FROM produto WHERE categoria = $1";
 const UPDATE_PRODUCT: &str = "UPDATE produto SET nome = $1, foto = $2, descricao = $3, categoria = $4, preco = $5, ingredientes = $6, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $7 RETURNING id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao";
-const DELETE_PRODUCT: &str = "DELETE FROM produto WHERE id = $1 RETURNING RETURNING id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao";
+const DELETE_PRODUCT: &str = "DELETE FROM produto WHERE id = $1 RETURNING id, nome, foto, descricao, CAST(categoria AS VARCHAR) AS categoria, preco, ingredientes, data_criacao, data_atualizacao";
 
 impl<'a> FromSql<'a> for Categoria {
     fn from_sql(
@@ -107,23 +106,6 @@ impl ProdutoGateway for PostgresProdutoRepository {
             Ok(produto) => Ok(Produto::from_row(&produto)),
             Err(_) => Err(DomainError::NotFound),
         }
-    }
-
-    async fn get_produtos_by_categoria(
-        &self,
-        categoria: Categoria,
-    ) -> Result<Vec<Produto>, DomainError> {
-        let categoria = tokio_postgres::types::Json(categoria);
-        let lista_produtos = self
-            .client
-            .query(QUERY_PRODUCT_BY_CATEGORIA, &[&categoria])
-            .await
-            .unwrap();
-        let mut produtos_vec = Vec::new();
-        for produto in lista_produtos {
-            produtos_vec.push(Produto::from_row(&produto));
-        }
-        Ok(produtos_vec)
     }
 
     async fn create_produto(&mut self, produto: Produto) -> Result<Produto, DomainError> {

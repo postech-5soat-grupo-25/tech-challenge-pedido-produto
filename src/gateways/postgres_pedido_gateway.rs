@@ -16,14 +16,14 @@ use crate::external::postgres::pedido::ProxyPedido;
 use crate::external::postgres::table::Table;
 
 const CREATE_PEDIDO: &str = "INSERT INTO pedido (cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, status, data_criacao, data_atualizacao) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const QUERY_PEDIDOS: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido where  status  <> 'Finalizado' order by array_position(array['Pronto','EmPreparacao', 'Recebido'], CAST(status AS VARCHAR)), data_criacao asc";
+const QUERY_PEDIDOS: &str = "SELECT id, cliente, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido where  status  <> 'Finalizado' order by array_position(array['Pronto','EmPreparacao', 'Recebido'], CAST(status AS VARCHAR)), data_criacao asc";
 const QUERY_PEDIDO_BY_ID: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido WHERE id = $1";
 const QUERY_PEDIDOS_NOVOS: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido WHERE status IN ('Pendente', 'EmPreparacao')";
-const SET_PEDIDO_STATUS: &str = "UPDATE pedido SET status = $2, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
+const SET_PEDIDO_STATUS: &str = "UPDATE pedido SET status = $2, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, cliente, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 // const SET_PEDIDO_CLIENTE: &str = "UPDATE pedido SET cliente_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const SET_PEDIDO_LANCHE: &str = "UPDATE pedido SET lanche_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const SET_PEDIDO_ACOMPANHAMENTO: &str = "UPDATE pedido SET acompanhamento_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-const SET_PEDIDO_BEBIDA: &str = "UPDATE pedido SET bebida_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
+// const SET_PEDIDO_LANCHE: &str = "UPDATE pedido SET lanche_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
+// const SET_PEDIDO_ACOMPANHAMENTO: &str = "UPDATE pedido SET acompanhamento_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
+// const SET_PEDIDO_BEBIDA: &str = "UPDATE pedido SET bebida_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 // const SET_PEDIDO_PAGAMENTO: &str = "UPDATE pedido SET pagamento = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 
 impl<'a> FromSql<'a> for Status {
@@ -81,19 +81,19 @@ impl ToSql for Status {
     }
 }
 
-pub struct PostgresPedidoRepository {
+pub struct PostgresPedidoGateway {
     client: Arc<Client>,
     tables: Vec<Table>,
     produto_repository: Arc<Mutex<dyn ProdutoGateway + Send + Sync>>,
 }
 
-impl PostgresPedidoRepository {
+impl PostgresPedidoGateway {
     pub async fn new(
         client: Arc<Client>,
         tables: Vec<Table>,
         produto_repository: Arc<Mutex<dyn ProdutoGateway + Send + Sync>>,
     ) -> Self {
-        let repo = PostgresPedidoRepository {
+        let repo = PostgresPedidoGateway {
             client,
             tables,
             produto_repository,
@@ -112,17 +112,14 @@ impl PostgresPedidoRepository {
     async fn pedido_from_proxy(&self, pedido_row: &tokio_postgres::Row) -> Pedido {
         let _pedido: ProxyPedido = ProxyPedido::from_row(&pedido_row);
 
-        let cliente_cpf_string = match _pedido.cliente_id() {
-            Some(_cliente_id) => {
-                // TODO: formatar corretamente o CPF
-                Some("000.000.000-00".to_string())
+        let cliente = match _pedido.cliente() {
+            Some(_cliente) => {
+                match Cpf::new(_cliente.to_owned()) {
+                    Ok(cpf) => Some(cpf),
+                    Err(_) => None,
+                }
             }
             None => None,
-        };
-
-        let cliente = match Cpf::new(cliente_cpf_string.unwrap()) {
-            Ok(cpf) => Some(cpf),
-            Err(_) => None,
         };
 
         let lanche = if let Some(lanche_id) = _pedido.lanche_id() {
@@ -165,7 +162,7 @@ impl PostgresPedidoRepository {
 }
 
 #[async_trait]
-impl PedidoGateway for PostgresPedidoRepository {
+impl PedidoGateway for PostgresPedidoGateway {
     async fn lista_pedidos(&mut self) -> Result<Vec<Pedido>, DomainError> {
         let pedidos = self.client.query(QUERY_PEDIDOS, &[]).await.unwrap();
         let mut pedidos_vec = Vec::new();
