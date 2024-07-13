@@ -15,7 +15,7 @@ impl FromStr for Env {
             "dev" => Ok(Env::Dev),
             "prod" => Ok(Env::Prod),
             "test" => Ok(Env::Test),
-            _ => Err(()),
+            _ => Ok(Env::Dev),
         }
     }
 }
@@ -31,23 +31,54 @@ impl ToString for Env {
 }
 
 pub struct Config {
-    pub secret: String,
     pub env: Env,
     pub db_url: String,
 }
 
 impl Config {
     pub fn build() -> Config {
-        let secret = env::var("SECRET").unwrap_or("secret".to_string());
         let env = env::var("ENV").unwrap_or("dev".to_string());
         let env = Env::from_str(&env).unwrap_or(Env::Dev);
         let db_url = env::var("DB_URL")
             .unwrap_or("postgres://postgres:postgres@localhost:5432/postgres".to_string());
 
         Config {
-            secret,
             env,
             db_url,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_env_from_str() {
+        assert_eq!(Env::from_str("dev"), Ok(Env::Dev));
+        assert_eq!(Env::from_str("prod"), Ok(Env::Prod));
+        assert_eq!(Env::from_str("test"), Ok(Env::Test));
+        assert_eq!(Env::from_str("invalid"), Ok(Env::Dev));
+    }
+
+    #[test]
+    fn test_env_to_string() {
+        assert_eq!(Env::Dev.to_string(), "dev".to_string());
+        assert_eq!(Env::Prod.to_string(), "prod".to_string());
+        assert_eq!(Env::Test.to_string(), "test".to_string());
+    }
+
+    #[test]
+    fn test_config_build() {
+        env::set_var("ENV", "dev");
+        env::set_var("DB_URL", "postgres://postgres:postgres@localhost:5432/postgres");
+
+        let config = Config::build();
+
+        assert_eq!(config.env, Env::Dev);
+        assert_eq!(
+            config.db_url,
+            "postgres://postgres:postgres@localhost:5432/postgres".to_string()
+        );
     }
 }

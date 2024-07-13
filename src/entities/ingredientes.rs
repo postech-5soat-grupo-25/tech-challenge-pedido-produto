@@ -28,6 +28,8 @@ mod tests {
             "Queijo".to_string(),
         ]);
         assert!(ingredientes.is_ok());
+
+        assert!(ingredientes.unwrap().to_vec_string().len() == 3);
     }
 
     #[test]

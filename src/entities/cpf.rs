@@ -14,10 +14,11 @@ impl Cpf {
         }
         // Default admin user
         if codigo == "000.000.000-00" {
-            return Ok(Cpf(codigo));
+            return Ok(Cpf("00000000000".to_string()));
         }
-        let regex_pattern = Regex::new(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$").unwrap();
+        let regex_pattern = Regex::new(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$").unwrap();
         if regex_pattern.is_match(&codigo) {
+            let codigo = Cpf::keep_only_numbers(codigo);
             if Cpf::validate(codigo.clone()) {
                 Ok(Cpf(codigo))
             } else {
@@ -28,11 +29,15 @@ impl Cpf {
         }
     }
 
+    fn keep_only_numbers(codigo: String) -> String {
+        // let cpf = codigo;
+        let codigo = codigo.replace(".", "");
+        let codigo = codigo.replace("-", "");
+        codigo
+    }
+
     fn validate(codigo: String) -> bool {
-        let cpf = codigo;
-        let cpf = cpf.replace(".", "");
-        let cpf = cpf.replace("-", "");
-        let cpf = cpf.chars().map(|d| d.to_digit(10).unwrap()).collect::<Vec<u32>>();
+        let cpf = codigo.chars().map(|d| d.to_digit(10).unwrap()).collect::<Vec<u32>>();
         let dv1 = (0..9).map(|i| cpf[i] * (10 - i as u32)).sum::<u32>() % 11;
         let dv1 = if dv1 < 2 { 0 } else { 11 - dv1 };
         let dv2 = (0..10).map(|i| cpf[i] * (11 - i as u32)).sum::<u32>() % 11;
@@ -40,10 +45,8 @@ impl Cpf {
         dv1 == cpf[9] && dv2 == cpf[10]
     }
 
-    pub fn get_only_number_string(&self) -> String {
-        let full_string = self.0.clone();
-        let only_number = full_string.replace(".", "").replace("-", "");
-        only_number
+    pub fn get_string(&self) -> String {
+        self.0.clone()
     }
 }
 
@@ -61,11 +64,19 @@ mod tests {
     fn test_cpf_admin() {
         let cpf = Cpf::new("000.000.000-00".to_string());
         assert!(cpf.is_ok());
+
+        let cpf = cpf.unwrap();
+
+        assert_eq!(cpf.get_string(), "00000000000");
     }
     #[test]
     fn test_cpf_valid() {
         let cpf = Cpf::new("097.855.456-60".to_string());
         assert!(cpf.is_ok());
+
+        let cpf = cpf.unwrap();
+
+        assert_eq!(cpf.get_string(), "09785545660");
     }
     #[test]
     fn test_cpf_invalid_number() {

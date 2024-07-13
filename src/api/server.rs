@@ -1,4 +1,5 @@
 use rocket::response::Redirect;
+use rocket::{Build, Rocket};
 use rocket_okapi::settings::UrlObject;
 use rocket_okapi::swagger_ui::*;
 use std::net::{IpAddr, Ipv4Addr};
@@ -12,7 +13,7 @@ use crate::external::postgres;
 use crate::gateways::in_memory_pedido_gateway::InMemoryPedidoRepository;
 use crate::gateways::in_memory_produto_gateway::InMemoryProdutoRepository;
 use crate::gateways::{
-    postgres_pedido_gateway::PostgresPedidoRepository,
+    postgres_pedido_gateway::PostgresPedidoGateway,
     postgres_produto_gateway::PostgresProdutoRepository,
 };
 use crate::traits::{pedido_gateway::PedidoGateway, produto_gateway::ProdutoGateway};
@@ -22,8 +23,7 @@ fn redirect_to_docs() -> Redirect {
     Redirect::to(uri!("/docs"))
 }
 
-#[rocket::main]
-pub async fn main() -> Result<(), rocket::Error> {
+pub async fn main() -> Rocket<Build> {
     let config = Config::build();
 
     println!("Loading environment variables...");
@@ -42,6 +42,8 @@ pub async fn main() -> Result<(), rocket::Error> {
                 Arc::new(Mutex::new(InMemoryPedidoRepository::new())),
             )
         } else {
+            print!("Connecting to database...");
+            print!("Database URL: {}", config.db_url);
             let postgres_connection_manager =
                 postgres::PgConnectionManager::new(config.db_url.clone())
                     .await
@@ -56,7 +58,7 @@ pub async fn main() -> Result<(), rocket::Error> {
             ));
 
             let pedido_repository = Arc::new(Mutex::new(
-                PostgresPedidoRepository::new(
+                PostgresPedidoGateway::new(
                     postgres_client.clone(),
                     tables,
                     produto_repository.clone(),
@@ -92,9 +94,35 @@ pub async fn main() -> Result<(), rocket::Error> {
         .manage(produto_repository)
         .manage(pedido_repository)
         .configure(server_config)
-        .launch()
-        .await?;
+}
 
-    println!("Server running on {}", config.env.to_string());
-    Ok(())
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use rocket::local::{blocking, asynchronous};
+    use rocket::http::Status;
+
+    #[test]
+    fn test_redirect_to_docs() {
+        let rocket = rocket::build().mount("/", routes![redirect_to_docs]);
+        let client = blocking::Client::tracked(rocket).expect("valid rocket instance");
+        let response = client.get("/").dispatch();
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/docs"));
+    }
+
+    #[tokio::test]
+    async fn test_main() {
+        env::set_var("ENV", "test");
+
+        let rocket = main().await;
+
+        let client = asynchronous::Client::tracked(rocket).await.expect("valid rocket instance");
+
+        let response = client.get("/pedidos").dispatch().await;
+
+        assert_eq!(response.status(), Status::Ok);
+    }
 }

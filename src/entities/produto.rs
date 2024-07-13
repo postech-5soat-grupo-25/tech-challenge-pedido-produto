@@ -56,15 +56,6 @@ impl Produto {
     }
 
     pub fn validate_entity(&self) -> Result<(), DomainError> {
-        match self.categoria {
-            Categoria::Lanche | Categoria::Acompanhamento | Categoria::Bebida => (),
-            // | Categoria::Sobremesa => (),
-            _ => {
-                return Err(DomainError::Invalid(
-                    "Categoria do Produto é inválida".to_string(),
-                ))
-            }
-        };
         assertion_concern::assert_argument_not_empty(self.nome.clone())?;
         assertion_concern::assert_argument_not_empty(self.descricao.clone())?;
         assertion_concern::assert_argument_not_negative(self.preco.clone())?;
@@ -151,11 +142,10 @@ impl Produto {
 // Unit Tests
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
     use super::*;
 
     fn create_valid_produto() -> Produto {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
         Produto::new(
             1,
             "Cheeseburger".to_string(),
@@ -183,6 +173,12 @@ mod tests {
         assert_eq!(produto.descricao(), "O clássico pão, carne e queijo!");
         assert_eq!(produto.categoria(), &Categoria::Lanche);
         assert_eq!(produto.preco(), 9.99);
+        assert_eq!(
+            produto.ingredientes().to_vec_string(),
+            vec!["Pão", "Hambúrguer", "Queijo"]
+        );
+        assert_eq!(produto.data_criacao(), "2021-08-01 00:00:00.000+0000");
+        assert_eq!(produto.data_atualizacao(), "2021-08-01 00:00:00.000+0000");
     }
 
     #[test]
@@ -193,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_produto_validate_entity_empty_nome() {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
         let produto = Produto::new(
             1,
             "".to_string(),
@@ -220,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_produto_validate_entity_negative_preco() {
-        let _now = Utc::now().format("%Y-%m-%d %H:%M:%S%.3f%z").to_string();
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
         let produto = Produto::new(
             1,
             "Cheeseburger".to_string(),
@@ -299,5 +295,16 @@ mod tests {
             "Esperado Err(DomainError::Invalid), obtido {:?}",
             result
         );
+    }
+
+    #[test]
+    fn test_pedido_set_data_atualizacao() {
+        let mut produto = create_valid_produto();
+
+        assert_eq!(produto.data_atualizacao(), &"2021-08-01 00:00:00.000+0000".to_string());
+
+        produto.set_data_atualizacao("2021-10-01 00:00:00.000+0000".to_string()).unwrap();
+
+        assert_eq!(produto.data_atualizacao(), &"2021-10-01 00:00:00.000+0000".to_string());
     }
 }

@@ -1,14 +1,3 @@
--- Inserts para `cliente`
--- Insert de 'Fulano da Silva'
-INSERT INTO cliente (nome, email, cpf, data_criacao, data_atualizacao)
-VALUES (
-        'Fulano da Silva',
-        'fulano.silva@exemplo.com',
-        '123.456.789-09',
-        CURRENT_TIMESTAMP,
-        CURRENT_TIMESTAMP
-    );
-
 -- Inserts para `produto`
 -- Insert para categoria 'Lanche'
 INSERT INTO produto (
@@ -145,7 +134,7 @@ VALUES (
 -- Inserts para `pedido`
 -- Insert combo completo com 'cliente' identificado
 INSERT INTO pedido (
-        cliente_id,
+        cliente,
         lanche_id,
         acompanhamento_id,
         bebida_id,
@@ -155,7 +144,7 @@ INSERT INTO pedido (
         data_atualizacao
     )
 VALUES (
-        1,
+        '09785545660',
         1,
         5,
         4,
@@ -166,7 +155,7 @@ VALUES (
     );
 -- Insert combo incompleto com 'cliente' não identificado
 INSERT INTO pedido (
-        cliente_id,
+        cliente,
         lanche_id,
         acompanhamento_id,
         bebida_id,
@@ -183,22 +172,5 @@ VALUES (
         'Mercado Pago',
         'Pronto',
         CURRENT_TIMESTAMP,
-        CURRENT_TIMESTAMP
-    );
-
-INSERT INTO pagamento (
-        id_pedido,
-        estado,
-        valor,
-        metodo,
-        referencia,
-        data_criacao
-    )
-VALUES (
-        1,
-        'pendente',
-        100.00,
-        'Mercado Pago',
-        'abc1234567890',
         CURRENT_TIMESTAMP
     );

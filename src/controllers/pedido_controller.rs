@@ -76,30 +76,171 @@ impl PedidoController {
             .atualiza_status(id, status)
             .await
     }
+}
 
-    pub async fn atualiza_produto_by_categoria(
-        &self,
-        id: usize,
-        categoria: &str,
-        produto_id: usize,
-    ) -> Result<Pedido, DomainError> {
-        match categoria {
-            "Lanche" => {
-                self.pedidos_e_pagamentos_use_case
-                    .adicionar_lanche_com_personalizacao(id, produto_id)
-                    .await
-            }
-            "Acompanhamento" => {
-                self.pedidos_e_pagamentos_use_case
-                    .adicionar_acompanhamento(id, produto_id)
-                    .await
-            }
-            "Bebida" => {
-                self.pedidos_e_pagamentos_use_case
-                    .adicionar_bebida(id, produto_id)
-                    .await
-            }
-            _ => Err(DomainError::Invalid("Categoria inválida".to_string())),
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::entities::cpf::Cpf;
+    use crate::entities::ingredientes::Ingredientes;
+    use crate::entities::pedido::Pedido;
+    use crate::entities::produto::{Categoria, Produto};
+    use crate::traits::pedido_gateway::MockPedidoGateway;
+    use crate::traits::produto_gateway::MockProdutoGateway;
+    use crate::use_cases::pedidos_e_pagamentos_use_case::CreatePedidoInput;
+    use mockall::predicate::*;
+    use pedido::Status;
+
+    fn create_valid_produto(categoria: Categoria) -> Produto {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
+        Produto::new(
+            1,
+            "Cheeseburger".to_string(),
+            "cheeseburger.png".to_string(),
+            "O clássico pão, carne e queijo!".to_string(),
+            categoria,
+            9.99,
+            Ingredientes::new(vec![
+                "Pão".to_string(),
+                "Hambúrguer".to_string(),
+                "Queijo".to_string(),
+            ])
+            .unwrap(),
+            _now.clone(),
+            _now,
+        )
+    }
+
+    fn create_valid_pedido() -> Pedido {
+        let _now = "2021-08-01 00:00:00.000+0000".to_string();
+        let cliente = Cpf::new("123.456.789-09".to_string()).unwrap();
+        let produto = create_valid_produto(Categoria::Lanche);
+        Pedido::new(
+            1,
+            Some(cliente),
+            Some(produto),
+            None,
+            None,
+            None,
+            Status::Pendente,
+            _now.clone(),
+            _now,
+        )
+    }
+
+    fn create_valid_input() -> CreatePedidoInput {
+        CreatePedidoInput {
+            cliente_id: None,
+            lanche_id: None,
+            acompanhamento_id: None,
+            bebida_id: None,
         }
+    }
+
+    #[tokio::test]
+    async fn test_get_pedidos() {
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+        mock_pedido_gateway
+            .expect_lista_pedidos()
+            .times(1)
+            .returning(|| Ok(vec![]));
+
+        let pedido_gateway = Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway = Arc::new(Mutex::new(MockProdutoGateway::new()));
+
+        let controller = PedidoController::new(pedido_gateway, produto_gateway);
+
+        let result = controller.get_pedidos().await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_pedido_by_id() {
+        let pedido_retornado = create_valid_pedido();
+        let pedido_esperado = pedido_retornado.clone();
+
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+        mock_pedido_gateway
+            .expect_get_pedido_by_id()
+            .times(1)
+            .with(eq(1))
+            .returning(move |_| Ok(pedido_retornado.clone()));
+
+        let pedido_gateway = Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway = Arc::new(Mutex::new(MockProdutoGateway::new()));
+
+        let controller = PedidoController::new(pedido_gateway, produto_gateway);
+
+        let result = controller.get_pedido_by_id(1).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().id(), pedido_esperado.id());
+    }
+
+    #[tokio::test]
+    async fn test_novo_pedido() {
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+        let pedido_retornado = create_valid_pedido();
+        let pedido_esperado = create_valid_pedido();
+
+        mock_pedido_gateway
+            .expect_create_pedido()
+            .times(1)
+            .returning(move |_| Ok(pedido_retornado.clone()));
+
+        let pedido_gateway = Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway = Arc::new(Mutex::new(MockProdutoGateway::new()));
+
+        let controller = PedidoController::new(pedido_gateway, produto_gateway);
+
+        let pedido_input = create_valid_input();
+
+        let result = controller.novo_pedido(pedido_input).await;
+
+        assert!(result.is_ok());
+
+        assert_eq!(result.unwrap().id(), pedido_esperado.id());
+    }
+
+    #[tokio::test]
+    async fn test_get_pedidos_novos() {
+        let pedido_retornado = create_valid_pedido();
+
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+        mock_pedido_gateway
+            .expect_get_pedidos_novos()
+            .times(1)
+            .returning(move || Ok(vec![pedido_retornado.clone()]));
+
+        let pedido_gateway = Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway = Arc::new(Mutex::new(MockProdutoGateway::new()));
+
+        let controller = PedidoController::new(pedido_gateway, produto_gateway);
+
+        let result = controller.get_pedidos_novos().await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_atualiza_status_pedido() {
+        let pedido_retornado = create_valid_pedido();
+        let pedido_esperado = create_valid_pedido();
+
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+        mock_pedido_gateway
+            .expect_atualiza_status()
+            .times(1)
+            .with(eq(1), eq(Status::Finalizado))
+            .returning(move |_, _| Ok(pedido_retornado.clone()));
+
+        let pedido_gateway = Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway = Arc::new(Mutex::new(MockProdutoGateway::new()));
+
+        let controller = PedidoController::new(pedido_gateway, produto_gateway);
+
+        let result = controller.atualiza_status_pedido(1, "Finalizado").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().id(), pedido_esperado.id());
     }
 }
