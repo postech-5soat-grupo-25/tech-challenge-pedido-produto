@@ -7,21 +7,6 @@
 
 Este projeto é desenvolvido como parte do Tech Challenge, um requisito para a conclusão do curso de Pós-Graduação em Software Architecture da FIAP. O desafio proposto visa solucionar problemas reais enfrentados por uma lanchonete em expansão, através do desenvolvimento de um sistema de autoatendimento eficiente.
 
-### Contexto
-
-Com a expansão de uma lanchonete e a ausência de um sistema de controle de pedidos, o atendimento pode se tornar caótico, afetando a satisfação dos clientes. Nosso sistema busca otimizar o processo de pedidos, pagamento, acompanhamento e entrega, garantindo uma experiência fluida e satisfatória para os clientes e uma gestão eficaz para o estabelecimento.
-
-#### Funcionalidades
-
-- **Pedido**: Interface de seleção de produtos com opções de montagem de combos.
-- **Pagamento**: Integração com Mercado Pago para pagamento via QRCode.
-- **Acompanhamento**: Monitoramento em tempo real do progresso e status do pedido.
-- **Entrega**: Notificação ao cliente e atualização do status após a retirada.
-- **Acesso Administrativo**:
-    - *Gerenciamento de clientes*: Administração do cadastro de clientes.
-    - *Gerenciamento de produtos*: Administração dos produtos disponíveis.
-    - *Acompanhamento de pedidos*: Visualização dos pedidos em andamento.
-
 ---
 
 ### Equipe
@@ -35,6 +20,10 @@ Com a expansão de uma lanchonete e a ausência de um sistema de controle de ped
 | [Matheus Bachiste Lopes](https://www.linkedin.com/in/matheus-bachiste-lopes/) | `352783` |
 
 ---
+
+### Contexto
+
+Com a expansão de uma lanchonete e a ausência de um sistema de controle de pedidos, o atendimento pode se tornar caótico, afetando a satisfação dos clientes. Nosso sistema busca otimizar o processo de pedidos, pagamento, acompanhamento e entrega, garantindo uma experiência fluida e satisfatória para os clientes e uma gestão eficaz para o estabelecimento.
 
 ### Documentação
 
