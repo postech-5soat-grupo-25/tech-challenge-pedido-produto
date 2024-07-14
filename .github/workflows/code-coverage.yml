@@ -1,3 +1,5 @@
+name: Code Coverage
+
 on:
   push:
     branches:
@@ -6,6 +8,6 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  check:
-    name: Code Coverage
+  coverage:
+    name: Run
     uses: postech-5soat-grupo-25/tech-challenge-templates/.github/workflows/code-coverage.yml@main

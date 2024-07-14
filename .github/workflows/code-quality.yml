@@ -8,6 +8,6 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  check:
-    name: Template
+  quality:
+    name: Run
     uses: postech-5soat-grupo-25/tech-challenge-templates/.github/workflows/code-quality.yml@main
