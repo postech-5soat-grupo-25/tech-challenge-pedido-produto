@@ -21,6 +21,18 @@ pub struct CreatePedidoInput {
     pub bebida_id: Option<usize>,
 }
 
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+pub enum StatusPagamento {
+    Aprovado,
+    Recusado
+}
+
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+pub struct InfoPagamenmto {
+    pub pagamento_id: String,
+    pub status: StatusPagamento,
+}
+
 #[derive(Clone)]
 pub struct PedidosEPagamentosUseCase {
     pedido_repository: Arc<Mutex<dyn PedidoGateway + Sync + Send>>,
@@ -89,6 +101,16 @@ impl PedidosEPagamentosUseCase {
         let mut pedido_repository = self.pedido_repository.lock().await;
 
         pedido_repository.create_pedido(pedido).await
+    }
+
+    pub async fn atualiza_pagamento(&self,  id: usize, info_pagamento : InfoPagamenmto) -> Result<Pedido, DomainError> {
+        let mut pedido_repository = self.pedido_repository.lock().await;
+        let status = match info_pagamento.status {
+            StatusPagamento::Aprovado => Status::Pago,
+            StatusPagamento::Recusado => Status::Cancelado
+        };
+
+        pedido_repository.atualiza_pagamento_status(id, info_pagamento.pagamento_id, status).await
     }
 }
 
@@ -168,7 +190,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_novo_pedido() {
-        let mut mock_pedido_repository = MockPedidoGateway::new();
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
 
         let returned_pedido = Pedido::new(
             1,
@@ -184,13 +206,13 @@ mod tests {
 
         let expected_pedido = returned_pedido.clone();
 
-        mock_pedido_repository
+        mock_pedido_gateway
             .expect_create_pedido()
             .times(1)
             .returning(move |_| Ok(returned_pedido.clone()));
 
         let use_case = PedidosEPagamentosUseCase::new(
-            Arc::new(Mutex::new(mock_pedido_repository)),
+            Arc::new(Mutex::new(mock_pedido_gateway)),
             Arc::new(Mutex::new(MockProdutoGateway::new())),
         );
 
@@ -201,6 +223,90 @@ mod tests {
                 acompanhamento_id: None,
                 bebida_id: None,
             })
+            .await;
+        assert_eq!(result.unwrap().id(), expected_pedido.id());
+    }
+
+    #[tokio::test]
+    async fn test_atualiza_pagamento_pago() {
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+
+        let returned_pedido = Pedido::new(
+            1,
+            None,
+            None,
+            None,
+            None,
+            Some("id_pagamento".to_string()),
+            Status::EmPreparacao,
+            "2021-10-10".to_string(),
+            "2021-10-10".to_string()
+        );
+
+        let expected_pedido = returned_pedido.clone();
+
+        mock_pedido_gateway.expect_atualiza_pagamento_status()
+            .times(1)
+            .withf(|id, pagamento, status| {
+                *id == 1 && *pagamento == "id_pagamento".to_string() && *status == Status::Pago
+            })
+            .returning(move |_, _, _| Ok(returned_pedido.clone()));
+
+        let use_case = PedidosEPagamentosUseCase::new(
+            Arc::new(Mutex::new(mock_pedido_gateway)),
+            Arc::new(Mutex::new(MockProdutoGateway::new())),
+        );
+
+        let result = use_case
+            .atualiza_pagamento(
+                1,
+                InfoPagamenmto {
+                    pagamento_id: "id_pagamento".to_string(),
+                    status: StatusPagamento::Aprovado,
+                },
+            )
+            .await;
+        assert_eq!(result.unwrap().id(), expected_pedido.id());
+    }
+
+    #[tokio::test]
+    async fn test_atualiza_pagamento_recusado() {
+        let mut mock_pedido_gateway = MockPedidoGateway::new();
+
+        let returned_pedido = Pedido::new(
+            1,
+            None,
+            None,
+            None,
+            None,
+            Some("id_pagamento".to_string()),
+            Status::EmPreparacao,
+            "2021-10-10".to_string(),
+            "2021-10-10".to_string()
+        );
+
+        let expected_pedido = returned_pedido.clone();
+
+        mock_pedido_gateway.expect_atualiza_pagamento_status()
+            .times(1)
+            .withf(|id, pagamento, status| {
+                *id == 1 && *pagamento == "id_pagamento".to_string() && *status == Status::Cancelado
+            })
+            .returning(move |_, _, _| Ok(returned_pedido.clone()));
+
+        let use_case = PedidosEPagamentosUseCase::new(
+            Arc::new(Mutex::new(mock_pedido_gateway)),
+            Arc::new(Mutex::new(MockProdutoGateway::new())),
+        );
+
+        let result = use_case
+            .atualiza_pagamento(
+                1,
+                InfoPagamenmto {
+                    pagamento_id: "id_pagamento".to_string(),
+                    status: StatusPagamento::Recusado,
+                },
+            )
             .await;
         assert_eq!(result.unwrap().id(), expected_pedido.id());
     }

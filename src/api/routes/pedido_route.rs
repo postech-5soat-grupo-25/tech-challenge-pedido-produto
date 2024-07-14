@@ -13,7 +13,7 @@ use crate::entities::pedido::Pedido;
 use crate::traits::{
     pedido_gateway, produto_gateway,
 };
-use crate::use_cases::pedidos_e_pagamentos_use_case::CreatePedidoInput;
+use crate::use_cases::pedidos_e_pagamentos_use_case::{CreatePedidoInput, InfoPagamenmto};
 
 #[openapi(tag = "Pedidos")]
 #[get("/")]
@@ -90,6 +90,23 @@ async fn put_status_pedido(
     Ok(Json(pedido))
 }
 
+#[openapi(tag = "Pedidos")]
+#[put("/<id>/pagamento", data = "<info_pagamento>")]
+async fn put_pagamento_pedido(
+    pedido_repository: &State<Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>>>,
+    produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
+    id: usize,
+    info_pagamento: Json<InfoPagamenmto>,
+) -> Result<Json<Pedido>, Status> {
+    let pedido_controller = PedidoController::new(
+        pedido_repository.inner().clone(),
+        produto_repository.inner().clone(),
+    );
+    let info_pagamento = info_pagamento.into_inner();
+    let pedido = pedido_controller.atualiza_pagamento_pedido(id, info_pagamento).await?;
+    Ok(Json(pedido))
+}
+
 
 pub fn routes() -> Vec<rocket::Route> {
     openapi_get_routes![
@@ -97,7 +114,8 @@ pub fn routes() -> Vec<rocket::Route> {
         get_pedido_by_id,
         post_novo_pedido,
         get_pedidos_novos,
-        put_status_pedido
+        put_status_pedido,
+        put_pagamento_pedido,
     ]
 }
 
@@ -262,6 +280,35 @@ mod tests {
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
         let response = client.put("/1/status/Pendente").dispatch();
+
+        assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[test]
+    fn test_put_pagamento_pedido() {
+        let mut mock_pedido_gateway = pedido_gateway::MockPedidoGateway::new();
+        mock_pedido_gateway
+            .expect_atualiza_pagamento_status()
+            .times(1)
+            .returning(|_, _, _| Ok(create_valid_pedido()));
+
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+
+        let rocket = rocket::build()
+            .mount("/", routes())
+            .manage(pedido_gateway)
+            .manage(produto_gateway);
+
+        let client = Client::tracked(rocket).expect("valid rocket instance");
+        let response = client
+            .put("/1/pagamento")
+            .header(ContentType::JSON)
+            .body(r##"{
+                "pagamento_id": "id_pagamento",
+                "status": "Aprovado"
+            }"##)
+            .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }

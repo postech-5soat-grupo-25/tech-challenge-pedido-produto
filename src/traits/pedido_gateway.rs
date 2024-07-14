@@ -56,6 +56,13 @@ pub trait PedidoGateway {
         pedido_id: usize,
         status: Status,
     ) -> Result<Pedido, DomainError>;
+
+    async fn atualiza_pagamento_status(
+        &mut self,
+        pedido_id: usize,
+        pagamento_id: String,
+        status: Status,
+    ) -> Result<Pedido, DomainError>;
 }
 
 #[cfg(test)]

@@ -20,11 +20,7 @@ const QUERY_PEDIDOS: &str = "SELECT id, cliente, lanche_id, acompanhamento_id, b
 const QUERY_PEDIDO_BY_ID: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido WHERE id = $1";
 const QUERY_PEDIDOS_NOVOS: &str = "SELECT id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao FROM pedido WHERE status IN ('Pendente', 'EmPreparacao')";
 const SET_PEDIDO_STATUS: &str = "UPDATE pedido SET status = $2, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, cliente, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-// const SET_PEDIDO_CLIENTE: &str = "UPDATE pedido SET cliente_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-// const SET_PEDIDO_LANCHE: &str = "UPDATE pedido SET lanche_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-// const SET_PEDIDO_ACOMPANHAMENTO: &str = "UPDATE pedido SET acompanhamento_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-// const SET_PEDIDO_BEBIDA: &str = "UPDATE pedido SET bebida_id = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
-// const SET_PEDIDO_PAGAMENTO: &str = "UPDATE pedido SET pagamento = $2 WHERE id = $1 RETURNING id, cliente_id, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
+const SET_PEDIDO_PAGAMENTO_STATUS: &str = "UPDATE pedido SET pagamento = $2, status = $3, data_atualizacao = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, cliente, lanche_id, acompanhamento_id, bebida_id, pagamento, CAST(status AS VARCHAR), data_criacao, data_atualizacao";
 
 impl<'a> FromSql<'a> for Status {
     fn from_sql(
@@ -190,6 +186,21 @@ impl PedidoGateway for PostgresPedidoGateway {
         let updated_pedido = self
             .client
             .query(SET_PEDIDO_STATUS, &[&_id, &status])
+            .await
+            .unwrap();
+
+        let updated_pedido = updated_pedido.get(0);
+        match updated_pedido {
+            Some(pedido) => Ok(self.pedido_from_proxy(&pedido).await),
+            None => Err(DomainError::NotFound),
+        }
+    }
+
+    async fn atualiza_pagamento_status(&mut self, id: usize, pagamento_id: String, status: Status) -> Result<Pedido, DomainError> {
+        let _id = id as i32;
+        let updated_pedido = self
+            .client
+            .query(SET_PEDIDO_PAGAMENTO_STATUS, &[&_id, &pagamento_id, &status])
             .await
             .unwrap();
 
