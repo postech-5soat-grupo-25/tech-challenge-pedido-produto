@@ -36,7 +36,10 @@ mod tests {
 
     let client = reqwest::Client::new();
 
-    let response = client.get("http://localhost:3000/pedidos").send().await.unwrap();
+    let response = client
+      .get("http://localhost:3000/pedidos")
+      .header("UserGroup", "Admin")
+      .send().await.unwrap();
 
     assert_eq!(response.status(), 200);
   }

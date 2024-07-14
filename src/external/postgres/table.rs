@@ -21,30 +21,19 @@ pub enum ColumnTypes {
   Text,
   Integer,
   Float,
-  Boolean,
   Timestamp,
-  JSON,
   Char(usize),
-  VARCHAR(usize),
-  ENUM(String, Vec<String>),
 }
 
 impl ColumnTypes {
   pub fn to_string(&self) -> String {
     match self {
-      ColumnTypes::Boolean => "BOOLEAN".to_string(),
       ColumnTypes::Float => "FLOAT".to_string(),
       ColumnTypes::Index => "SERIAL PRIMARY KEY".to_string(),
       ColumnTypes::Integer => "INTEGER".to_string(),
       ColumnTypes::Text => "TEXT".to_string(),
       ColumnTypes::Timestamp => "TIMESTAMP".to_string(),
-      ColumnTypes::JSON => "JSON".to_string(),
       ColumnTypes::Char(size) => format!("CHAR({})", size),
-      ColumnTypes::VARCHAR(size) => format!("VARCHAR({})", size),
-      ColumnTypes::ENUM(name, values) => {
-        let values_str = values.iter().map(|v| format!("'{}'", v)).collect::<Vec<_>>().join(", ");
-        format!("{} ENUM({})", name, values_str)
-    },
     }
   }
 }
@@ -91,5 +80,47 @@ impl Table {
 
     let query = format!("{}{})", query, columns_query);
     query
+  }
+}
+
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  #[test]
+  fn test_table_get_create_if_not_exists_query() {
+    let table = Table {
+      name: TablesNames::Produto,
+      columns: [
+        ("id".to_string(), (ColumnTypes::Index, ColumnNullable(false), ColumnDefault(None))),
+        ("name".to_string(), (ColumnTypes::Text, ColumnNullable(false), ColumnDefault(None))),
+        ("price".to_string(), (ColumnTypes::Float, ColumnNullable(false), ColumnDefault(None))),
+      ].iter().cloned().collect()
+    };
+
+    let query = table.get_create_if_not_exists_query();
+    assert!(query.starts_with("CREATE TABLE IF NOT EXISTS public.produto ("));
+    assert!(query.contains("id SERIAL PRIMARY KEY NOT NULL"));
+    assert!(query.contains("name TEXT NOT NULL"));
+    assert!(query.contains("price FLOAT NOT NULL"));
+  }
+
+  #[test]
+  fn test_table_get_create_if_not_exists_query_with_default() {
+    let table = Table {
+      name: TablesNames::Pedido,
+      columns: [
+        ("id".to_string(), (ColumnTypes::Index, ColumnNullable(false), ColumnDefault(None))),
+        ("name".to_string(), (ColumnTypes::Text, ColumnNullable(false), ColumnDefault(None))),
+        ("price".to_string(), (ColumnTypes::Float, ColumnNullable(false), ColumnDefault(Some("0.0".to_string())))),
+      ].iter().cloned().collect()
+    };
+
+    let query = table.get_create_if_not_exists_query();
+    assert!(query.starts_with("CREATE TABLE IF NOT EXISTS public.pedido ("));
+    assert!(query.contains("id SERIAL PRIMARY KEY NOT NULL"));
+    assert!(query.contains("name TEXT NOT NULL"));
+    assert!(query.contains("price FLOAT NOT NULL DEFAULT 0.0"));
   }
 }

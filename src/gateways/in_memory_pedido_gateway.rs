@@ -88,6 +88,21 @@ impl PedidoGateway for InMemoryPedidoRepository {
         Err(DomainError::NotFound)
     }
 
+    async fn atualiza_pagamento_status(&mut self, id: usize, pagamento_id: String, status: Status) -> Result<Pedido, DomainError> {
+        let pedidos = &mut self._pedidos;
+        if status == Status::Invalido {
+            return Err::<Pedido, _>(DomainError::Invalid("status".to_string()));
+        }
+        for pedido in pedidos.iter_mut() {
+            if *pedido.id() == id {
+                pedido.set_status(status.clone());
+                pedido.set_pagamento(pagamento_id.clone());
+                return Ok(pedido.clone());
+            }
+        }
+        Err(DomainError::NotFound)
+    }
+
     async fn create_pedido(&mut self, pedido: Pedido) -> Result<Pedido, DomainError> {
         let pedidos = &mut self._pedidos;
         pedidos.push(pedido.clone());
@@ -220,5 +235,19 @@ mod tests {
         let pedido = pedido_repository.atualiza_status(1, Status::EmPreparacao).await.unwrap();
 
         assert_eq!(pedido.status(), &Status::EmPreparacao);
+    }
+
+    #[tokio::test]
+    async fn test_get_atualiza_pagamento_status() {
+        let mut pedido_repository = InMemoryPedidoRepository::new();
+
+        let pedido = pedido_repository.get_pedido_by_id(1).await.unwrap();
+
+        assert_eq!(pedido.status(), &Status::Pendente);
+
+        let pedido = pedido_repository.atualiza_pagamento_status(1, "pedido_id".to_string(), Status::Pago).await.unwrap();
+
+        assert_eq!(pedido.status(), &Status::Pago);
+        assert_eq!(pedido.pagamento(), Some(&"pedido_id".to_string()));
     }
 }
