@@ -1,5 +1,8 @@
 # Tech Challenge | PosTech 5SOAT • Grupo 25
 
+![microservice](https://img.shields.io/badge/pedido--produto-blue?label=microsservi%C3%A7o&labelColor=%23505050&color=%23d63865) 
+[![sonarcloud](https://sonarcloud.io/api/project_badges/measure?project=postech-5soat-grupo-25_tech-challenge-pedido-produto&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=postech-5soat-grupo-25_tech-challenge-pedido-produto) [![codecov](https://codecov.io/gh/postech-5soat-grupo-25/tech-challenge-pedido-produto/branch/main/graph/badge.svg?token=N0U9CNHDC8)](https://codecov.io/gh/postech-5soat-grupo-25/tech-challenge-pedido-produto)
+
 ## Sobre o Projeto
 
 Este projeto é desenvolvido como parte do Tech Challenge, um requisito para a conclusão do curso de Pós-Graduação em Software Architecture da FIAP. O desafio proposto visa solucionar problemas reais enfrentados por uma lanchonete em expansão, através do desenvolvimento de um sistema de autoatendimento eficiente.
@@ -36,87 +39,3 @@ Com a expansão de uma lanchonete e a ausência de um sistema de controle de ped
 ### Documentação
 
 Para mais informações sobre o projeto, incluindo detalhes técnicos e guias de utilização, acesse nossa *documentação completa* em: [postech-5soat-grupo-25.github.io](https://postech-5soat-grupo-25.github.io/). O sumário abaixo irá direcioná-lo para as documentações de cada etapa do desenvolvimento do projeto.
-
-
-### Como fazer deploy
-
-Essa aplicação foi configurada para deploy em um cluster EKS na AWS, para isso, execute os seguintes passos:
- - Faça deploy da infra do EKS e do RDS necessários
- - Configure os secrets `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY` no repositório
- - Insira a url do banco de dados com usuário e senha na variável `DB_URL` no arquivo `kustomize/configmap.yaml`
- - Abra um PR para a branch main e rode o primeiro deploy
- - Após o deploy e configuração inicial pegue as URLs dos dois load balancers no console AWS e insira-os no arquivo `kustomize/configmap.yaml` nas variáveis `API_HOST` e `MOCK_PAGAMENTOS_URL`
- - Abra mais um PR para a branch main e rode o mais um deploy
-
-
-#### Fase 1
-
-##### Entregável 1
-
-- [Domain-Driven Design](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#domain-driven-design)
-  - [Glossário da Linguagem Ubíqua](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#glossário-da-linguagem-ubíqua)
-  - [Técnias de Modelagem de Domínio](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#técnias-de-modelagem-de-domínio)
-    - [Domain Storytelling](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#domain-storytelling)
-    - [Event Storming](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#event-storming)
-  - [Entidades e Objetos de Valor](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#entidades-e-objetos-de-valor)
-    - [Entidades](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#entidades)
-    - [Objetos de Valor](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_1/#objetos-de-valor)
-
-##### Entregável 2
-
-- [Arquitetura Hegaxonal](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_2/#arquitetura-hegaxonal)
-  - [Estrutura de Diretórios](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_2/#estrutura-de-diretórios)
-  - [Frameworks e Bibliotecas](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_2/#frameworks-e-bibliotecas)
-    - [Rocket](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_2/#rocket)
-    - [Tokio Postgres](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_2/#tokio-postgres)
-
-##### Entregável 3
-
-- [Dockerfile](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#dockerfile)
-  - [Estágio de Construção](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#estágio-de-construção)
-  - [Estágio de Produção](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#estágio-de-produção)
-- [Docker Compose](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#docker-compose)
-  - [Serviço de Aplicação](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#serviço-de-aplicação)
-  - [Serviço de Banco de Dados](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#serviço-de-banco-de-dados)
-- [Tutorial para Execução da Aplicação com Docker](https://postech-5soat-grupo-25.github.io/fase_1/entregavel_3/#tutorial-para-execução-da-aplicação-com-docker)
-
-
-#### Fase 2
-
-##### Entregável 1
-
-- [Clean Architecture e Clean Code](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#clean-architecture-e-clean-code)
-  - [Ports \& Adapters x Clean Architecture](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#ports--adapters-x-clean-architecture)
-  - [Conversão para Clean Architecture](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#conversão-para-clean-architecture)
-    - [Camadas da Arquitetura](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#camadas-da-arquitetura)
-      - [Entidades](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#entidades)
-      - [Casos de Uso](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#casos-de-uso)
-      - [Gateways](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#gateways)
-      - [Controllers](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_1/#controllers)
-
-##### Entregável 2
-
-- [Infraestrutura Kubernetes](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#infraestrutura-kubernetes)
-  - [Construção dos Manifestos](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#construção-dos-manifestos)
-    - [app-deployment](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#app-deployment)
-    - [app-hpa](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#app-hpa)
-    - [app-metrics](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#app-metrics)
-    - [app-svc](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#app-svc)
-    - [configmap](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#configmap)
-    - [db-postgres](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#db-postgres)
-    - [db-svc](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#db-svc)
-    - [mock-pagamentos-pod](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#mock-pagamentos-pod)
-    - [mock-pagamentos-svc](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_2/#mock-pagamentos-svc)
-  
-##### Entregável 3
-
-- [Arquitetura Kubernetes](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#arquitetura-kubernetes)
-- [Tutorial para Execução da Aplicação com Kubernetes](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#tutorial-para-execução-da-aplicação-com-kubernetes)
-- [Tutorial para Interação com as APIs](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#tutorial-para-interação-com-as-apis)
-  - [Autenticação](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#autenticação)
-  - [Usuários](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#usuários)
-  - [Clientes](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#clientes)
-  - [Produtos](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#produtos)
-  - [Pedidos](https://postech-5soat-grupo-25.github.io/fase_2/entregavel_3/#pedidos)
-
----
