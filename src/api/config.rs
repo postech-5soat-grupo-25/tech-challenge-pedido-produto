@@ -33,6 +33,7 @@ impl ToString for Env {
 pub struct Config {
     pub env: Env,
     pub db_url: String,
+    pub api_key: String,
 }
 
 impl Config {
@@ -41,10 +42,12 @@ impl Config {
         let env = Env::from_str(&env).unwrap_or(Env::Dev);
         let db_url = env::var("DB_URL")
             .unwrap_or("postgres://postgres:postgres@localhost:5432/postgres".to_string());
+        let api_key = env::var("API_KEY").unwrap_or("api_key".to_string());
 
         Config {
             env,
             db_url,
+            api_key,
         }
     }
 }
@@ -72,6 +75,7 @@ mod tests {
     fn test_config_build() {
         env::set_var("ENV", "dev");
         env::set_var("DB_URL", "postgres://postgres:postgres@localhost:5432/postgres");
+        env::set_var("API_KEY", "valid_api_key");
 
         let config = Config::build();
 
@@ -80,5 +84,6 @@ mod tests {
             config.db_url,
             "postgres://postgres:postgres@localhost:5432/postgres".to_string()
         );
+        assert_eq!(config.api_key, "valid_api_key".to_string());
     }
 }

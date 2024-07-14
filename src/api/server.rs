@@ -8,6 +8,9 @@ use tokio::sync::Mutex;
 
 use super::error_handling::generic_catchers;
 use super::routes::{pedido_route, produto_route};
+use crate::adapters::{
+    api_key_validator::ApiKeyValidator, user_group_validator::UserGroupValidator,
+};
 use crate::api::config::{Config, Env};
 use crate::external::postgres;
 use crate::gateways::in_memory_pedido_gateway::InMemoryPedidoRepository;
@@ -16,6 +19,8 @@ use crate::gateways::{
     postgres_pedido_gateway::PostgresPedidoGateway,
     postgres_produto_gateway::PostgresProdutoRepository,
 };
+use crate::traits::api_key_validator_adapter::ApiKeyValidatorAdapter;
+use crate::traits::user_group_validator_adapter::UserGroupValidatorAdapter;
 use crate::traits::{pedido_gateway::PedidoGateway, produto_gateway::ProdutoGateway};
 
 #[get("/")]
@@ -25,8 +30,6 @@ fn redirect_to_docs() -> Redirect {
 
 pub async fn main() -> Rocket<Build> {
     let config = Config::build();
-
-    println!("Loading environment variables...");
 
     if config.env == Env::Test {
         println!("Running test environment");
@@ -74,6 +77,14 @@ pub async fn main() -> Rocket<Build> {
         .merge(("address", IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))))
         .merge(("port", 3000));
 
+    let api_key_validator = ApiKeyValidator::new(config.api_key.clone());
+    let api_key_validator: Arc<dyn ApiKeyValidatorAdapter + Sync + Send> =
+        Arc::new(api_key_validator);
+
+    let user_group_validator = UserGroupValidator::new();
+    let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
+        Arc::new(user_group_validator);
+
     rocket::build()
         .mount("/", routes![redirect_to_docs])
         .register("/", generic_catchers())
@@ -93,15 +104,17 @@ pub async fn main() -> Rocket<Build> {
         .register("/pedidos", pedido_route::catchers())
         .manage(produto_repository)
         .manage(pedido_repository)
+        .manage(api_key_validator)
+        .manage(user_group_validator)
         .configure(server_config)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rocket::http::{Header, Status};
+    use rocket::local::{asynchronous, blocking};
     use std::env;
-    use rocket::local::{blocking, asynchronous};
-    use rocket::http::Status;
 
     #[test]
     fn test_redirect_to_docs() {
@@ -119,9 +132,13 @@ mod tests {
 
         let rocket = main().await;
 
-        let client = asynchronous::Client::tracked(rocket).await.expect("valid rocket instance");
+        let client = asynchronous::Client::tracked(rocket)
+            .await
+            .expect("valid rocket instance");
 
-        let response = client.get("/pedidos").dispatch().await;
+        let response = client.get("/pedidos")
+            .header(Header::new("UserGroup", "Admin"))
+            .dispatch().await;
 
         assert_eq!(response.status(), Status::Ok);
     }

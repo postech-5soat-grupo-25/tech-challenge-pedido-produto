@@ -7,12 +7,12 @@ use rocket_okapi::{openapi, openapi_get_routes};
 use tokio::sync::Mutex;
 
 use crate::api::error_handling::ErrorResponse;
+use crate::api::route_guards::api_key_route_guard::ApiKeyGuard;
+use crate::api::route_guards::kitchen_route_guard::KitchenGuard;
 use crate::controllers::pedido_controller::PedidoController;
 use crate::entities::pedido::Pedido;
 
-use crate::traits::{
-    pedido_gateway, produto_gateway,
-};
+use crate::traits::{pedido_gateway, produto_gateway};
 use crate::use_cases::pedidos_e_pagamentos_use_case::{CreatePedidoInput, InfoPagamenmto};
 
 #[openapi(tag = "Pedidos")]
@@ -20,6 +20,7 @@ use crate::use_cases::pedidos_e_pagamentos_use_case::{CreatePedidoInput, InfoPag
 async fn get_pedidos(
     pedido_repository: &State<Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>>>,
     produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
+    _usuario_cozinha: KitchenGuard,
 ) -> Result<Json<Vec<Pedido>>, Status> {
     let pedido_controller = PedidoController::new(
         pedido_repository.inner().clone(),
@@ -35,6 +36,7 @@ async fn get_pedido_by_id(
     pedido_repository: &State<Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>>>,
     produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
     id: usize,
+    _usuario_cozinha: KitchenGuard,
 ) -> Result<Json<Pedido>, Status> {
     let pedido_controller = PedidoController::new(
         pedido_repository.inner().clone(),
@@ -65,6 +67,7 @@ async fn post_novo_pedido(
 async fn get_pedidos_novos(
     pedido_repository: &State<Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>>>,
     produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
+    _usuario_cozinha: KitchenGuard,
 ) -> Result<Json<Vec<Pedido>>, Status> {
     let pedido_controller = PedidoController::new(
         pedido_repository.inner().clone(),
@@ -81,6 +84,7 @@ async fn put_status_pedido(
     produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
     id: usize,
     status: &str,
+    _usuario_cozinha: KitchenGuard,
 ) -> Result<Json<Pedido>, Status> {
     let pedido_controller = PedidoController::new(
         pedido_repository.inner().clone(),
@@ -97,16 +101,18 @@ async fn put_pagamento_pedido(
     produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
     id: usize,
     info_pagamento: Json<InfoPagamenmto>,
+    _api_key: ApiKeyGuard,
 ) -> Result<Json<Pedido>, Status> {
     let pedido_controller = PedidoController::new(
         pedido_repository.inner().clone(),
         produto_repository.inner().clone(),
     );
     let info_pagamento = info_pagamento.into_inner();
-    let pedido = pedido_controller.atualiza_pagamento_pedido(id, info_pagamento).await?;
+    let pedido = pedido_controller
+        .atualiza_pagamento_pedido(id, info_pagamento)
+        .await?;
     Ok(Json(pedido))
 }
-
 
 pub fn routes() -> Vec<rocket::Route> {
     openapi_get_routes![
@@ -135,8 +141,23 @@ pub fn catchers() -> Vec<rocket::Catcher> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rocket::{http::ContentType, local::blocking::Client};
-    use crate::{base::domain_error::DomainError, entities::{ingredientes::Ingredientes, pedido, produto::{Categoria, Produto}}};
+    use crate::{
+        adapters::{api_key_validator::ApiKeyValidator, user_group_validator::UserGroupValidator},
+        base::domain_error::DomainError,
+        entities::{
+            ingredientes::Ingredientes,
+            pedido,
+            produto::{Categoria, Produto},
+        },
+        traits::{
+            api_key_validator_adapter::ApiKeyValidatorAdapter,
+            user_group_validator_adapter::UserGroupValidatorAdapter,
+        },
+    };
+    use rocket::{
+        http::{ContentType, Header},
+        local::blocking::Client,
+    };
 
     fn create_valid_pedido() -> Pedido {
         let _now = "2021-08-01 00:00:00.000+0000".to_string();
@@ -161,16 +182,25 @@ mod tests {
             .times(1)
             .returning(|| Ok(vec![]));
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let user_group_validator = UserGroupValidator::new();
+        let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
+            Arc::new(user_group_validator);
 
         let rocket = rocket::build()
             .mount("/", routes())
             .manage(pedido_gateway)
-            .manage(produto_gateway);
+            .manage(produto_gateway)
+            .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.get("/").dispatch();
+        let response = client
+            .get("/")
+            .header(Header::new("UserGroup", "Kitchen"))
+            .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -183,16 +213,25 @@ mod tests {
             .times(1)
             .returning(|_| Ok(create_valid_pedido()));
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let user_group_validator = UserGroupValidator::new();
+        let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
+            Arc::new(user_group_validator);
 
         let rocket = rocket::build()
             .mount("/", routes())
             .manage(pedido_gateway)
-            .manage(produto_gateway);
+            .manage(produto_gateway)
+            .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.get("/1").dispatch();
+        let response = client
+            .get("/1")
+            .header(Header::new("UserGroup", "Kitchen"))
+            .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -206,24 +245,31 @@ mod tests {
             .returning(|_| Ok(create_valid_pedido()));
 
         let mut mock_produto_gateway = produto_gateway::MockProdutoGateway::new();
-        mock_produto_gateway.expect_get_produto_by_id().returning(|_| Ok(Produto::new(
-            1,
-            "Nome".to_string(),
-            "Foto".to_string(),
-            "Descricao".to_string(),
-            Categoria::Lanche,
-            1.0,
-            Ingredientes::new(vec![
-                "Pão".to_string(),
-                "Hambúrguer".to_string(),
-                "Queijo".to_string(),
-            ]).unwrap(),
-            "2021-10-10".to_string(),
-            "2021-10-10".to_string(),
-        )));
+        mock_produto_gateway
+            .expect_get_produto_by_id()
+            .returning(|_| {
+                Ok(Produto::new(
+                    1,
+                    "Nome".to_string(),
+                    "Foto".to_string(),
+                    "Descricao".to_string(),
+                    Categoria::Lanche,
+                    1.0,
+                    Ingredientes::new(vec![
+                        "Pão".to_string(),
+                        "Hambúrguer".to_string(),
+                        "Queijo".to_string(),
+                    ])
+                    .unwrap(),
+                    "2021-10-10".to_string(),
+                    "2021-10-10".to_string(),
+                ))
+            });
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_produto_gateway));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_produto_gateway));
 
         let rocket = rocket::build()
             .mount("/", routes())
@@ -231,11 +277,15 @@ mod tests {
             .manage(produto_gateway);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .header(ContentType::JSON)
-            .body(r##"{
+            .body(
+                r##"{
                 "lanche_id": 1
-            }"##).dispatch();
+            }"##,
+            )
+            .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -248,16 +298,25 @@ mod tests {
             .times(1)
             .returning(|| Ok(vec![create_valid_pedido()]));
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let user_group_validator = UserGroupValidator::new();
+        let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
+            Arc::new(user_group_validator);
 
         let rocket = rocket::build()
             .mount("/", routes())
             .manage(pedido_gateway)
-            .manage(produto_gateway);
+            .manage(produto_gateway)
+            .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.get("/novos").dispatch();
+        let response = client
+            .get("/novos")
+            .header(Header::new("UserGroup", "Kitchen"))
+            .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -270,16 +329,25 @@ mod tests {
             .times(1)
             .returning(|_, _| Ok(create_valid_pedido()));
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let user_group_validator = UserGroupValidator::new();
+        let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
+            Arc::new(user_group_validator);
 
         let rocket = rocket::build()
             .mount("/", routes())
             .manage(pedido_gateway)
-            .manage(produto_gateway);
+            .manage(produto_gateway)
+            .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.put("/1/status/Pendente").dispatch();
+        let response = client
+            .put("/1/status/Pendente")
+            .header(Header::new("UserGroup", "Kitchen"))
+            .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
     }
@@ -292,22 +360,31 @@ mod tests {
             .times(1)
             .returning(|_, _, _| Ok(create_valid_pedido()));
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let api_key_validator = ApiKeyValidator::new("api_key".to_string());
+        let api_key_validator: Arc<dyn ApiKeyValidatorAdapter + Sync + Send> =
+            Arc::new(api_key_validator);
 
         let rocket = rocket::build()
             .mount("/", routes())
             .manage(pedido_gateway)
-            .manage(produto_gateway);
+            .manage(produto_gateway)
+            .manage(api_key_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
         let response = client
             .put("/1/pagamento")
             .header(ContentType::JSON)
-            .body(r##"{
+            .header(Header::new("x-api-key", "api_key"))
+            .body(
+                r##"{
                 "pagamento_id": "id_pagamento",
                 "status": "Aprovado"
-            }"##)
+            }"##,
+            )
             .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
@@ -321,21 +398,32 @@ mod tests {
             .times(1)
             .returning(|_| Err(DomainError::NotFound));
 
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> = Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> = Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(mock_pedido_gateway));
+        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
+            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
+        let user_group_validator = UserGroupValidator::new();
+        let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
+            Arc::new(user_group_validator);
 
         let rocket = rocket::build()
             .mount("/", routes())
             .register("/", catchers())
             .manage(pedido_gateway)
-            .manage(produto_gateway);
+            .manage(produto_gateway)
+            .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.get("/1").dispatch();
+        let response = client.get("/1")
+            .header(Header::new("UserGroup", "Kitchen"))
+            .dispatch();
 
         assert_eq!(response.status(), Status::NotFound);
 
         let response = response.into_string().unwrap();
-        assert_eq!(r##"{"msg":"Pedido não encontrado!","status":404}"##, response);
+        assert_eq!(
+            r##"{"msg":"Pedido não encontrado!","status":404}"##,
+            response
+        );
     }
 }

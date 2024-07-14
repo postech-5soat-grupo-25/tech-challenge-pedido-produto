@@ -21,30 +21,19 @@ pub enum ColumnTypes {
   Text,
   Integer,
   Float,
-  Boolean,
   Timestamp,
-  JSON,
   Char(usize),
-  VARCHAR(usize),
-  ENUM(String, Vec<String>),
 }
 
 impl ColumnTypes {
   pub fn to_string(&self) -> String {
     match self {
-      ColumnTypes::Boolean => "BOOLEAN".to_string(),
       ColumnTypes::Float => "FLOAT".to_string(),
       ColumnTypes::Index => "SERIAL PRIMARY KEY".to_string(),
       ColumnTypes::Integer => "INTEGER".to_string(),
       ColumnTypes::Text => "TEXT".to_string(),
       ColumnTypes::Timestamp => "TIMESTAMP".to_string(),
-      ColumnTypes::JSON => "JSON".to_string(),
       ColumnTypes::Char(size) => format!("CHAR({})", size),
-      ColumnTypes::VARCHAR(size) => format!("VARCHAR({})", size),
-      ColumnTypes::ENUM(name, values) => {
-        let values_str = values.iter().map(|v| format!("'{}'", v)).collect::<Vec<_>>().join(", ");
-        format!("{} ENUM({})", name, values_str)
-    },
     }
   }
 }
