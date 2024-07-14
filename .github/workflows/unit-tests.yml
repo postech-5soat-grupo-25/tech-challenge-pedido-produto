@@ -36,13 +36,19 @@ jobs:
         id: report 
         uses: innoq/action-cargo-test-report@main
         with:
-          cargo-test-report-json: 'results.json'
+          cargo-test-report-json: results.json
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@main
         if: always()
         with:
-          check_name: Report
+          check_name: Results
           fail_on_failure: true
           require_tests: true
           summary: ${{ steps.report.outputs.summary }}
+
+      - name: Archive Results
+        uses: actions/upload-artifact@v1
+        with:
+          name: unit-tests-report
+          path: results.json
