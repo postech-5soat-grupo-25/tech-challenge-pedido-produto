@@ -72,6 +72,14 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+      with:
+        args: >
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.projectKey=postech-5soat-grupo-25_tech-challenge-pedido-produto
+          -Dsonar.organization=postech-5soat-grupo-25
+          -Dsonar.sources=src
+          -Dsonar.language=rust
+          -Dsonar.externalIssuesReportPaths=sonar-issues.json
 
     - name: Archive Results
       uses: actions/upload-artifact@v1
