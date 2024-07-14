@@ -9,5 +9,7 @@ on:
 
 jobs:
   coverage:
-    name: Run
+    name: Check
     uses: postech-5soat-grupo-25/tech-challenge-templates/.github/workflows/code-coverage.yml@main
+    secrets:
+      codecov_token:  ${{ secrets.CODECOV_TOKEN }}

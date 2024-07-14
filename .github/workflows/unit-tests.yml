@@ -11,6 +11,5 @@ on:
 
 jobs:
   tests:
-    name: Run
+    name: Check
     uses: postech-5soat-grupo-25/tech-challenge-templates/.github/workflows/unit-tests.yml@main
-  

@@ -9,5 +9,7 @@ on:
 
 jobs:
   quality:
-    name: Run
+    name: Check
     uses: postech-5soat-grupo-25/tech-challenge-templates/.github/workflows/code-quality.yml@main
+    secrets:
+      sonarcloud_token: ${{ secrets.SONARCLOUD_TOKEN }}
