@@ -82,3 +82,45 @@ impl Table {
     query
   }
 }
+
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  #[test]
+  fn test_table_get_create_if_not_exists_query() {
+    let table = Table {
+      name: TablesNames::Produto,
+      columns: [
+        ("id".to_string(), (ColumnTypes::Index, ColumnNullable(false), ColumnDefault(None))),
+        ("name".to_string(), (ColumnTypes::Text, ColumnNullable(false), ColumnDefault(None))),
+        ("price".to_string(), (ColumnTypes::Float, ColumnNullable(false), ColumnDefault(None))),
+      ].iter().cloned().collect()
+    };
+
+    let query = table.get_create_if_not_exists_query();
+    assert!(query.starts_with("CREATE TABLE IF NOT EXISTS public.produto ("));
+    assert!(query.contains("id SERIAL PRIMARY KEY NOT NULL"));
+    assert!(query.contains("name TEXT NOT NULL"));
+    assert!(query.contains("price FLOAT NOT NULL"));
+  }
+
+  #[test]
+  fn test_table_get_create_if_not_exists_query_with_default() {
+    let table = Table {
+      name: TablesNames::Pedido,
+      columns: [
+        ("id".to_string(), (ColumnTypes::Index, ColumnNullable(false), ColumnDefault(None))),
+        ("name".to_string(), (ColumnTypes::Text, ColumnNullable(false), ColumnDefault(None))),
+        ("price".to_string(), (ColumnTypes::Float, ColumnNullable(false), ColumnDefault(Some("0.0".to_string())))),
+      ].iter().cloned().collect()
+    };
+
+    let query = table.get_create_if_not_exists_query();
+    assert!(query.starts_with("CREATE TABLE IF NOT EXISTS public.pedido ("));
+    assert!(query.contains("id SERIAL PRIMARY KEY NOT NULL"));
+    assert!(query.contains("name TEXT NOT NULL"));
+    assert!(query.contains("price FLOAT NOT NULL DEFAULT 0.0"));
+  }
+}
