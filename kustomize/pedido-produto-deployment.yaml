@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rust-app
+  name: pedido-produto-app
   labels:
-    app: rust-app
+    app: pedido-produto-app
 spec:
   template:
     metadata:
-      name: rust-app
+      name: pedido-produto-app
       labels:
-        app: rust-app
+        app: pedido-produto-app
     spec:
       containers:
-        - name: rust-app-container
+        - name: pedido-produto-app-container
           image: 739842188003.dkr.ecr.us-east-1.amazonaws.com/rust_api:latest
           ports:
             - containerPort: 3000   
@@ -25,4 +25,4 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rust-app
+      app: pedido-produto-app

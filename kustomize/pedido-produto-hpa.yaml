@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rust-app-hpa
+  name: pedido-produto-app-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: rust-app
+    name: pedido-produto-app
   minReplicas: 1
   maxReplicas: 3
   metrics:
