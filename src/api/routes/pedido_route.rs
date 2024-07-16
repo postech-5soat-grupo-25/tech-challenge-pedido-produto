@@ -378,7 +378,7 @@ mod tests {
         let response = client
             .put("/1/pagamento")
             .header(ContentType::JSON)
-            .header(Header::new("x-api-key", "api_key"))
+            .header(Header::new("api-secret", "api_key"))
             .body(
                 r##"{
                 "pagamento_id": "id_pagamento",
