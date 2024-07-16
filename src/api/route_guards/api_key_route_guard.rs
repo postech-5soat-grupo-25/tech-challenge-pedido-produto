@@ -21,7 +21,7 @@ impl<'r> FromRequest<'r> for ApiKeyGuard {
     type Error = DomainError;
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        match req.headers().get_one("X-Api-Key") {
+        match req.headers().get_one("api-secret") {
             Some(key) => {
                 let api_key_validator = req
                     .rocket()
@@ -52,7 +52,7 @@ impl<'a> OpenApiFromRequest<'a> for ApiKeyGuard {
             description: Some("API necessária para acessar.".to_owned()),
 
             data: SecuritySchemeData::ApiKey {
-                name: "X-Api-Key".to_owned(),
+                name: "api-secret".to_owned(),
                 location: "header".to_owned(),
             },
             extensions: Object::default(),

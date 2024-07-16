@@ -25,10 +25,10 @@ mod tests {
 
     #[test]
     fn test_validate_key() {
-        let api_key = "api_key".to_string();
+        let api_key = "valid_api_key".to_string();
         let api_key_validator = ApiKeyValidator::new(api_key);
 
-        assert_eq!(api_key_validator.validate_key("api_key".to_string()), true);
+        assert_eq!(api_key_validator.validate_key("valid_api_key".to_string()), true);
         assert_eq!(api_key_validator.validate_key("invalid".to_string()), false);
     }
 }
