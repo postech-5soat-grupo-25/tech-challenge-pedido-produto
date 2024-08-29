@@ -7,13 +7,12 @@ use rocket_okapi::{openapi, openapi_get_routes};
 use tokio::sync::Mutex;
 
 use crate::api::error_handling::ErrorResponse;
-use crate::api::route_guards::api_key_route_guard::ApiKeyGuard;
 use crate::api::route_guards::kitchen_route_guard::KitchenGuard;
 use crate::controllers::pedido_controller::PedidoController;
 use crate::entities::pedido::Pedido;
 
 use crate::traits::{pedido_gateway, produto_gateway};
-use crate::use_cases::pedidos_e_pagamentos_use_case::{CreatePedidoInput, InfoPagamenmto};
+use crate::use_cases::pedidos_e_pagamentos_use_case::CreatePedidoInput;
 
 #[openapi(tag = "Pedidos")]
 #[get("/")]
@@ -94,26 +93,6 @@ async fn put_status_pedido(
     Ok(Json(pedido))
 }
 
-#[openapi(tag = "Pedidos")]
-#[put("/<id>/pagamento", data = "<info_pagamento>")]
-async fn put_pagamento_pedido(
-    pedido_repository: &State<Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>>>,
-    produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
-    id: usize,
-    info_pagamento: Json<InfoPagamenmto>,
-    _api_key: ApiKeyGuard,
-) -> Result<Json<Pedido>, Status> {
-    let pedido_controller = PedidoController::new(
-        pedido_repository.inner().clone(),
-        produto_repository.inner().clone(),
-    );
-    let info_pagamento = info_pagamento.into_inner();
-    let pedido = pedido_controller
-        .atualiza_pagamento_pedido(id, info_pagamento)
-        .await?;
-    Ok(Json(pedido))
-}
-
 pub fn routes() -> Vec<rocket::Route> {
     openapi_get_routes![
         get_pedidos,
@@ -121,7 +100,6 @@ pub fn routes() -> Vec<rocket::Route> {
         post_novo_pedido,
         get_pedidos_novos,
         put_status_pedido,
-        put_pagamento_pedido,
     ]
 }
 
@@ -414,7 +392,8 @@ mod tests {
             .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.get("/1")
+        let response = client
+            .get("/1")
             .header(Header::new("UserGroup", "Kitchen"))
             .dispatch();
 

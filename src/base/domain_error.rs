@@ -5,5 +5,6 @@ pub enum DomainError {
     Unauthorized,
     NotFound,
     Invalid(String),
-    NonPositive
+    NonPositive,
+    Database(String),
 }
