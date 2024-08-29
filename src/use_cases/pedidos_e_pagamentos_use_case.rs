@@ -29,6 +29,7 @@ pub enum StatusPagamento {
 
 #[derive(Clone, Debug, Deserialize, JsonSchema)]
 pub struct InfoPagamenmto {
+    pub pedido_id: usize,
     pub pagamento_id: String,
     pub status: StatusPagamento,
 }
@@ -103,14 +104,18 @@ impl PedidosEPagamentosUseCase {
         pedido_repository.create_pedido(pedido).await
     }
 
-    pub async fn atualiza_pagamento(&self,  id: usize, info_pagamento : InfoPagamenmto) -> Result<Pedido, DomainError> {
-        let mut pedido_repository = self.pedido_repository.lock().await;
+    pub async fn atualiza_pagamento(&self,  info_pagamento : InfoPagamenmto) -> Result<Pedido, DomainError> {
+        let pedido_repository = self.pedido_repository.try_lock();
+        if pedido_repository.is_err() {
+            return Err(DomainError::Invalid("Erro ao acessar o banco de dados".to_string()));
+        }
+        
         let status = match info_pagamento.status {
             StatusPagamento::Aprovado => Status::Pago,
             StatusPagamento::Recusado => Status::Cancelado
         };
-
-        pedido_repository.atualiza_pagamento_status(id, info_pagamento.pagamento_id, status).await
+        
+        pedido_repository.unwrap().atualiza_pagamento_status(info_pagamento.pedido_id, info_pagamento.pagamento_id, status).await
     }
 }
 
@@ -259,8 +264,8 @@ mod tests {
 
         let result = use_case
             .atualiza_pagamento(
-                1,
                 InfoPagamenmto {
+                    pedido_id: 1,
                     pagamento_id: "id_pagamento".to_string(),
                     status: StatusPagamento::Aprovado,
                 },
@@ -301,8 +306,8 @@ mod tests {
 
         let result = use_case
             .atualiza_pagamento(
-                1,
                 InfoPagamenmto {
+                    pedido_id: 1,
                     pagamento_id: "id_pagamento".to_string(),
                     status: StatusPagamento::Recusado,
                 },

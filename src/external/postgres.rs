@@ -6,11 +6,20 @@ pub mod produto;
 use tokio_postgres::{NoTls, Error, Client};
 use tokio;
 
+use crate::base::domain_error::DomainError;
+
 use self::table::{Table, TablesNames};
 use self::produto::get_produto_table_columns;
 use self::pedido::get_pedido_table_columns;
 pub struct PgConnectionManager {
   pub client: Client,
+}
+
+impl From<tokio_postgres::Error> for DomainError {
+  fn from(e: tokio_postgres::Error) -> Self {
+    eprintln!("Database error: {}", e);
+    DomainError::Database(e.to_string())
+  }
 }
 
 impl PgConnectionManager {

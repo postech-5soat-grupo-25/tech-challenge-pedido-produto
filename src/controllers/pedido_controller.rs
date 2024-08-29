@@ -6,7 +6,6 @@ use crate::base::domain_error::DomainError;
 use crate::entities::pedido::{self, Pedido};
 use crate::traits::{pedido_gateway::PedidoGateway, produto_gateway::ProdutoGateway};
 
-use crate::use_cases::pedidos_e_pagamentos_use_case::InfoPagamenmto;
 use crate::use_cases::{
     pedidos_e_pagamentos_use_case::CreatePedidoInput,
     pedidos_e_pagamentos_use_case::PedidosEPagamentosUseCase,
@@ -78,15 +77,6 @@ impl PedidoController {
             .await
     }
 
-    pub async fn atualiza_pagamento_pedido(
-        &self,
-        id: usize,
-        info_pagamento: InfoPagamenmto
-    ) -> Result<Pedido, DomainError> {
-        self.pedidos_e_pagamentos_use_case
-            .atualiza_pagamento(id, info_pagamento)
-            .await
-    }
 }
 
 #[cfg(test)]
