@@ -36,7 +36,7 @@ pub struct Config {
     pub env: Env,
     pub db_url: String,
     pub api_key: String,
-    pub rabbitmq_addr: String,
+    pub rabbitmq_addr: Option<String>,
     pub queue_name: String,
 }
 
@@ -48,7 +48,11 @@ impl Config {
         let db_url = env::var("DB_URL")
             .unwrap_or("postgres://postgres:postgres@localhost:5432/postgres".to_string());
         let api_key = env::var("API_KEY").unwrap_or("api_key".to_string());
-        let rabbitmq_addr = env::var("RABBITMQ_ADDR").unwrap_or("amqp://rabbitmq:rabbitmq@localhost:5672/%2f".to_string());
+        let rabbitmq_addr = match env::var("RABBITMQ_ADDR"){
+            Ok(addr) => Some(addr),
+            Err(_) => None
+        };
+
         let queue_name = env::var("QUEUE_NAME").unwrap_or("queue_name".to_string());
 
         Config {
