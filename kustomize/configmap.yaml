@@ -10,3 +10,5 @@ data:
   MOCK_PAGAMENTOS_URL: http://a49bcfc17b0814367b7de1fa4f286728-1742838876.us-east-1.elb.amazonaws.com:9000/payment/
   API_HOST: aad8d67d34e714d6885106d5c3d06077-1355197257.us-east-1.elb.amazonaws.com:3000
   AWS_COGNITO_USER_POOL_ID: us-east-1_YZhnEtbAT
+  QUEUE_NAME: pagamento-queue
+  RABBITMQ_URL: amqp://rabbitmq:rabbitmq@rabbitmq-service:5672/%2f
