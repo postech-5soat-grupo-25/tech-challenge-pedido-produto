@@ -6,7 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  ECR_RUST_API_REPOSITORY: rust_api
+  ECR_RUST_API_REPOSITORY: pedido_produto_api
   ECR_DJANGO_API_REPOSITORY: django_api
   EKS_CLUSTER_NAME: tech-challenge
   AWS_REGION: us-east-1

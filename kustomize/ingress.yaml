@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+   kind: Ingress
+   metadata:
+     name: tech-challenge-ingress
+     annotations:
+       alb.ingress.kubernetes.io/scheme: internet-facing
+       alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+       alb.ingress.kubernetes.io/target-type: ip
+       alb.ingress.kubernetes.io/group.name: "my-api-ingress-group"
+   spec:
+     rules:
+       - host: "pagamento.tech-challenge.com"
+         http:
+           paths:
+             - path: /
+               pathType: Prefix
+               backend:
+                 service:
+                   name: pagamentos-service
+                   port:
+                     number: 80
+       - host: "usuario-cliente.tech-challenge.com"
+         http:
+           paths:
+             - path: /
+               pathType: Prefix
+               backend:
+                 service:
+                   name: usuario-cliente-app-cluster-ip-svc
+                   port:
+                     number: 80
+        - host: "pedido-produto.tech-challenge.com"
+         http:
+           paths:
+             - path: /
+               pathType: Prefix
+               backend:
+                 service:
+                   name: rust-app-cluster-ip-svc
+                   port:
+                     number: 80
