@@ -201,8 +201,7 @@ impl PedidoGateway for PostgresPedidoGateway {
         let updated_pedido = self
             .client
             .query(SET_PEDIDO_PAGAMENTO_STATUS, &[&_id, &pagamento_id, &status])
-            .await
-            .unwrap();
+            .await?;
 
         let updated_pedido = updated_pedido.get(0);
         match updated_pedido {

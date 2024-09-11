@@ -7,13 +7,12 @@ use rocket_okapi::{openapi, openapi_get_routes};
 use tokio::sync::Mutex;
 
 use crate::api::error_handling::ErrorResponse;
-use crate::api::route_guards::api_key_route_guard::ApiKeyGuard;
 use crate::api::route_guards::kitchen_route_guard::KitchenGuard;
 use crate::controllers::pedido_controller::PedidoController;
 use crate::entities::pedido::Pedido;
 
 use crate::traits::{pedido_gateway, produto_gateway};
-use crate::use_cases::pedidos_e_pagamentos_use_case::{CreatePedidoInput, InfoPagamenmto};
+use crate::use_cases::pedidos_e_pagamentos_use_case::CreatePedidoInput;
 
 #[openapi(tag = "Pedidos")]
 #[get("/")]
@@ -94,26 +93,6 @@ async fn put_status_pedido(
     Ok(Json(pedido))
 }
 
-#[openapi(tag = "Pedidos")]
-#[put("/<id>/pagamento", data = "<info_pagamento>")]
-async fn put_pagamento_pedido(
-    pedido_repository: &State<Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>>>,
-    produto_repository: &State<Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>>>,
-    id: usize,
-    info_pagamento: Json<InfoPagamenmto>,
-    _api_key: ApiKeyGuard,
-) -> Result<Json<Pedido>, Status> {
-    let pedido_controller = PedidoController::new(
-        pedido_repository.inner().clone(),
-        produto_repository.inner().clone(),
-    );
-    let info_pagamento = info_pagamento.into_inner();
-    let pedido = pedido_controller
-        .atualiza_pagamento_pedido(id, info_pagamento)
-        .await?;
-    Ok(Json(pedido))
-}
-
 pub fn routes() -> Vec<rocket::Route> {
     openapi_get_routes![
         get_pedidos,
@@ -121,7 +100,6 @@ pub fn routes() -> Vec<rocket::Route> {
         post_novo_pedido,
         get_pedidos_novos,
         put_status_pedido,
-        put_pagamento_pedido,
     ]
 }
 
@@ -142,17 +120,14 @@ pub fn catchers() -> Vec<rocket::Catcher> {
 mod tests {
     use super::*;
     use crate::{
-        adapters::{api_key_validator::ApiKeyValidator, user_group_validator::UserGroupValidator},
+        adapters::user_group_validator::UserGroupValidator,
         base::domain_error::DomainError,
         entities::{
             ingredientes::Ingredientes,
             pedido,
             produto::{Categoria, Produto},
         },
-        traits::{
-            api_key_validator_adapter::ApiKeyValidatorAdapter,
-            user_group_validator_adapter::UserGroupValidatorAdapter,
-        },
+        traits::user_group_validator_adapter::UserGroupValidatorAdapter,
     };
     use rocket::{
         http::{ContentType, Header},
@@ -353,44 +328,6 @@ mod tests {
     }
 
     #[test]
-    fn test_put_pagamento_pedido() {
-        let mut mock_pedido_gateway = pedido_gateway::MockPedidoGateway::new();
-        mock_pedido_gateway
-            .expect_atualiza_pagamento_status()
-            .times(1)
-            .returning(|_, _, _| Ok(create_valid_pedido()));
-
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
-            Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
-            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
-        let api_key_validator = ApiKeyValidator::new("api_key".to_string());
-        let api_key_validator: Arc<dyn ApiKeyValidatorAdapter + Sync + Send> =
-            Arc::new(api_key_validator);
-
-        let rocket = rocket::build()
-            .mount("/", routes())
-            .manage(pedido_gateway)
-            .manage(produto_gateway)
-            .manage(api_key_validator);
-
-        let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client
-            .put("/1/pagamento")
-            .header(ContentType::JSON)
-            .header(Header::new("api-secret", "api_key"))
-            .body(
-                r##"{
-                "pagamento_id": "id_pagamento",
-                "status": "Aprovado"
-            }"##,
-            )
-            .dispatch();
-
-        assert_eq!(response.status(), Status::Ok);
-    }
-
-    #[test]
     fn test_handle_not_found() {
         let mut mock_pedido_gateway = pedido_gateway::MockPedidoGateway::new();
         mock_pedido_gateway
@@ -414,7 +351,8 @@ mod tests {
             .manage(user_group_validator);
 
         let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client.get("/1")
+        let response = client
+            .get("/1")
             .header(Header::new("UserGroup", "Kitchen"))
             .dispatch();
 

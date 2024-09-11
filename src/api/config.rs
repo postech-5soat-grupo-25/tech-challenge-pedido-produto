@@ -1,6 +1,7 @@
 use std::{env, str::FromStr};
+use dotenv::dotenv;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Env {
     Dev,
     Prod,
@@ -30,24 +31,36 @@ impl ToString for Env {
     }
 }
 
+#[derive(Clone)]
 pub struct Config {
     pub env: Env,
     pub db_url: String,
     pub api_key: String,
+    pub rabbitmq_addr: Option<String>,
+    pub queue_name: String,
 }
 
 impl Config {
     pub fn build() -> Config {
+        dotenv().ok();
         let env = env::var("ENV").unwrap_or("dev".to_string());
         let env = Env::from_str(&env).unwrap_or(Env::Dev);
         let db_url = env::var("DB_URL")
             .unwrap_or("postgres://postgres:postgres@localhost:5432/postgres".to_string());
         let api_key = env::var("API_KEY").unwrap_or("api_key".to_string());
+        let rabbitmq_addr = match env::var("RABBITMQ_ADDR"){
+            Ok(addr) => Some(addr),
+            Err(_) => None
+        };
+
+        let queue_name = env::var("QUEUE_NAME").unwrap_or("queue_name".to_string());
 
         Config {
             env,
             db_url,
             api_key,
+            rabbitmq_addr,
+            queue_name
         }
     }
 }

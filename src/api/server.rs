@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 
 use super::error_handling::generic_catchers;
 use super::routes::{pedido_route, produto_route};
+use crate::adapters::rabbitmq_pagament_update_subscriber::RabbitMQPagamentoUpdateSubscriber;
 use crate::adapters::{
     api_key_validator::ApiKeyValidator, user_group_validator::UserGroupValidator,
 };
@@ -35,7 +36,7 @@ pub async fn main() -> Rocket<Build> {
         println!("Running test environment");
     }
 
-    let (produto_repository, pedido_repository): (
+    let (produto_gateway, pedido_gateway): (
         Arc<Mutex<dyn ProdutoGateway + Sync + Send>>,
         Arc<Mutex<dyn PedidoGateway + Sync + Send>>,
     ) = {
@@ -56,20 +57,20 @@ pub async fn main() -> Rocket<Build> {
 
             let tables = postgres::get_tables();
 
-            let produto_repository = Arc::new(Mutex::new(
+            let produto_gateway = Arc::new(Mutex::new(
                 PostgresProdutoRepository::new(postgres_client.clone(), tables.clone()).await,
             ));
 
-            let pedido_repository = Arc::new(Mutex::new(
+            let pedido_gateway = Arc::new(Mutex::new(
                 PostgresPedidoGateway::new(
                     postgres_client.clone(),
                     tables,
-                    produto_repository.clone(),
+                    produto_gateway.clone(),
                 )
                 .await,
             ));
 
-            (produto_repository, pedido_repository)
+            (produto_gateway, pedido_gateway)
         }
     };
 
@@ -84,6 +85,21 @@ pub async fn main() -> Rocket<Build> {
     let user_group_validator = UserGroupValidator::new();
     let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
         Arc::new(user_group_validator);
+
+    match config.rabbitmq_addr {
+        Some(_) => {
+            let pagamento_update_subscriber = RabbitMQPagamentoUpdateSubscriber::new(
+                config.clone(),
+                produto_gateway.clone(),
+                pedido_gateway.clone(),
+            );
+
+            pagamento_update_subscriber.subscribe()
+        }
+        None => {
+            println!("Not subscribed to RabbitMQ");
+        }
+    }
 
     rocket::build()
         .mount("/", routes![redirect_to_docs])
@@ -102,8 +118,8 @@ pub async fn main() -> Rocket<Build> {
         .mount("/pedidos", pedido_route::routes())
         .register("/produtos", produto_route::catchers())
         .register("/pedidos", pedido_route::catchers())
-        .manage(produto_repository)
-        .manage(pedido_repository)
+        .manage(produto_gateway)
+        .manage(pedido_gateway)
         .manage(api_key_validator)
         .manage(user_group_validator)
         .configure(server_config)
@@ -136,9 +152,11 @@ mod tests {
             .await
             .expect("valid rocket instance");
 
-        let response = client.get("/pedidos")
+        let response = client
+            .get("/pedidos")
             .header(Header::new("UserGroup", "Admin"))
-            .dispatch().await;
+            .dispatch()
+            .await;
 
         assert_eq!(response.status(), Status::Ok);
     }
