@@ -86,20 +86,16 @@ pub async fn main() -> Rocket<Build> {
     let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
         Arc::new(user_group_validator);
 
-    match config.rabbitmq_addr {
-        Some(_) => {
-            let pagamento_update_subscriber = RabbitMQPagamentoUpdateSubscriber::new(
-                config.clone(),
-                produto_gateway.clone(),
-                pedido_gateway.clone(),
-            );
 
-            pagamento_update_subscriber.subscribe()
-        }
-        None => {
-            println!("Not subscribed to RabbitMQ");
-        }
-    }
+    let pagamento_update_subscriber = RabbitMQPagamentoUpdateSubscriber::new(
+        config.clone(),
+        produto_gateway.clone(),
+        pedido_gateway.clone(),
+    );
+
+    pagamento_update_subscriber.subscribe();
+
+    
 
     rocket::build()
         .mount("/", routes![redirect_to_docs])
