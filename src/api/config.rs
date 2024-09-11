@@ -33,7 +33,7 @@ impl ToString for Env {
 
 #[derive(Clone)]
 pub struct Config {
-    pub env: Env,
+    pub env: String,
     pub db_url: String,
     pub api_key: String,
     pub rabbitmq_addr: Option<String>,
@@ -43,8 +43,7 @@ pub struct Config {
 impl Config {
     pub fn build() -> Config {
         dotenv().ok();
-        let env = env::var("ENV").unwrap_or("dev".to_string());
-        let env = Env::from_str(&env).unwrap_or(Env::Dev);
+        let env = env::var("ENV").unwrap_or("test".to_string());
         let db_url = env::var("DB_URL")
             .unwrap_or("postgres://postgres:postgres@localhost:5432/postgres".to_string());
         let api_key = env::var("API_KEY").unwrap_or("api_key".to_string());
@@ -92,7 +91,7 @@ mod tests {
 
         let config = Config::build();
 
-        assert_eq!(config.env, Env::Dev);
+        assert_eq!(config.env, "dev");
         assert_eq!(
             config.db_url,
             "postgres://postgres:postgres@localhost:5432/postgres".to_string()
