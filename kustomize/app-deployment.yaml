@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: rust-app-container
-          image: 739842188003.dkr.ecr.us-east-1.amazonaws.com/rust_api:latest
+          image: 891376965147.dkr.ecr.us-east-1.amazonaws.com/pedido_produto_api:latest
           ports:
             - containerPort: 3000   
           envFrom:

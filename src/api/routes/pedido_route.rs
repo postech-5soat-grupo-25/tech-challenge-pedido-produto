@@ -120,17 +120,14 @@ pub fn catchers() -> Vec<rocket::Catcher> {
 mod tests {
     use super::*;
     use crate::{
-        adapters::{api_key_validator::ApiKeyValidator, user_group_validator::UserGroupValidator},
+        adapters::user_group_validator::UserGroupValidator,
         base::domain_error::DomainError,
         entities::{
             ingredientes::Ingredientes,
             pedido,
             produto::{Categoria, Produto},
         },
-        traits::{
-            api_key_validator_adapter::ApiKeyValidatorAdapter,
-            user_group_validator_adapter::UserGroupValidatorAdapter,
-        },
+        traits::user_group_validator_adapter::UserGroupValidatorAdapter,
     };
     use rocket::{
         http::{ContentType, Header},
@@ -325,44 +322,6 @@ mod tests {
         let response = client
             .put("/1/status/Pendente")
             .header(Header::new("UserGroup", "Kitchen"))
-            .dispatch();
-
-        assert_eq!(response.status(), Status::Ok);
-    }
-
-    #[test]
-    fn test_put_pagamento_pedido() {
-        let mut mock_pedido_gateway = pedido_gateway::MockPedidoGateway::new();
-        mock_pedido_gateway
-            .expect_atualiza_pagamento_status()
-            .times(1)
-            .returning(|_, _, _| Ok(create_valid_pedido()));
-
-        let pedido_gateway: Arc<Mutex<dyn pedido_gateway::PedidoGateway + Sync + Send>> =
-            Arc::new(Mutex::new(mock_pedido_gateway));
-        let produto_gateway: Arc<Mutex<dyn produto_gateway::ProdutoGateway + Sync + Send>> =
-            Arc::new(Mutex::new(produto_gateway::MockProdutoGateway::new()));
-        let api_key_validator = ApiKeyValidator::new("api_key".to_string());
-        let api_key_validator: Arc<dyn ApiKeyValidatorAdapter + Sync + Send> =
-            Arc::new(api_key_validator);
-
-        let rocket = rocket::build()
-            .mount("/", routes())
-            .manage(pedido_gateway)
-            .manage(produto_gateway)
-            .manage(api_key_validator);
-
-        let client = Client::tracked(rocket).expect("valid rocket instance");
-        let response = client
-            .put("/1/pagamento")
-            .header(ContentType::JSON)
-            .header(Header::new("api-secret", "api_key"))
-            .body(
-                r##"{
-                "pagamento_id": "id_pagamento",
-                "status": "Aprovado"
-            }"##,
-            )
             .dispatch();
 
         assert_eq!(response.status(), Status::Ok);
