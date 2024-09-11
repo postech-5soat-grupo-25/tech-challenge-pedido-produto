@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-configmap
+data:
+  POSTGRES_DB: postgres
+  POSTGRES_PASSWORD: mainpassword
+  POSTGRES_USER: mainuser
+  DB_URL: postgresql://mainuser:mainpassword@db-svc:5432/postgres

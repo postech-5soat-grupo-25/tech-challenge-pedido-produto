@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tech-challenge-pedido-produto
+  labels:
+    app: tech-challenge-pedido-produto
+spec:
+  template:
+    metadata:
+      name: tech-challenge-pedido-produto
+      labels:
+        app: tech-challenge-pedido-produto
+    spec:
+      containers:
+        - name: tech-challenge-pedido-produto-container
+          image: mblopes/tech-challenge-pedido-produto:latest
+          ports:
+            - containerPort: 3000   
+          envFrom:
+          - configMapRef:
+              name: app-configmap
+          resources:
+            requests:
+              cpu: 1m
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tech-challenge-pedido-produto
