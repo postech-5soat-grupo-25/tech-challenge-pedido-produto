@@ -32,7 +32,7 @@ fn redirect_to_docs() -> Redirect {
 pub async fn main() -> Rocket<Build> {
     let config = Config::build();
 
-    if config.env == Env::Test {
+    if config.env == "test" {
         println!("Running test environment");
     }
 
@@ -40,7 +40,7 @@ pub async fn main() -> Rocket<Build> {
         Arc<Mutex<dyn ProdutoGateway + Sync + Send>>,
         Arc<Mutex<dyn PedidoGateway + Sync + Send>>,
     ) = {
-        if config.env == Env::Test {
+        if config.env == "test" {
             (
                 Arc::new(Mutex::new(InMemoryProdutoRepository::new())),
                 Arc::new(Mutex::new(InMemoryPedidoRepository::new())),
