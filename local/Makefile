@@ -11,10 +11,10 @@ deploy-db:
 	kubectl apply -f ./pgadmin-svc.yaml
 
 deploy-api:
-	-kubectl delete -f ./app-svc.yaml
-	-kubectl delete -f ./app-deployment.yaml
-	kubectl apply -f ./app-deployment.yaml
-	kubectl apply -f ./app-svc.yaml
+	-kubectl delete -f ./services.yaml
+	-kubectl delete -f ./deployment.yaml
+	kubectl apply -f ./deployment.yaml
+	kubectl apply -f ./services.yaml
 
 build-image:
 	docker build -t mblopes/tech-challenge-pedido-produto:latest ../

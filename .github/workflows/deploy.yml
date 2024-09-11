@@ -1,13 +1,12 @@
-name: Deploy
+name: '🚀 Rust Api Deploy'
 
 on:
-  push:
-    branches: [ "main" ]
+  workflow_dispatch:
+
 
 env:
   CARGO_TERM_COLOR: always
   ECR_RUST_API_REPOSITORY: pedido_produto_api
-  ECR_DJANGO_API_REPOSITORY: django_api
   EKS_CLUSTER_NAME: tech-challenge
   AWS_REGION: us-east-1
 
@@ -54,6 +53,6 @@ jobs:
         IMAGE_TAG: ${{ steps.commit.outputs.short }}
       run: |
         kubectl apply -f kustomize/configmap.yaml
-        sed -i.bak "s|DOCKER_IMAGE|$ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest|g" kustomize/app-deployment.yaml && \
-        kubectl apply -f kustomize/app-deployment.yaml
-        kubectl apply -f kustomize/app-svc.yaml
+        sed -i.bak "s|DOCKER_IMAGE|$ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest|g" kustomize/deployment.yaml && \
+        kubectl apply -f kustomize/deployment.yaml
+        kubectl apply -f kustomize/services.yaml
