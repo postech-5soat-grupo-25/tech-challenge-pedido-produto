@@ -11,4 +11,5 @@ data:
   API_HOST: aad8d67d34e714d6885106d5c3d06077-1355197257.us-east-1.elb.amazonaws.com:3000
   AWS_COGNITO_USER_POOL_ID: us-east-1_YZhnEtbAT
   QUEUE_NAME: pagamento-queue
-  RABBITMQ_URL: amqp://rabbitmq:rabbitmq@rabbitmq-service:5672/%2f
+  RABBITMQ_ADDR: amqp://rabbitmq:rabbitmq@rabbitmq-service:5672/%2f
+  ENV: test
