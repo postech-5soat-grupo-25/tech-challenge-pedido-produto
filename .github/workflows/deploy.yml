@@ -40,9 +40,8 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
         IMAGE_TAG: ${{ steps.commit.outputs.short }}
       run: |
-        docker pull brunomafra/grupo-25-tech-challenge
-        docker tag brunomafra/grupo-25-tech-challenge $ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest
+        docker build -t $ECR_REGISTRY/$ECR_PAGAMENTOS_API_REPO:latest -f Dockerfile .
+        docker push $ECR_REGISTRY/$ECR_PAGAMENTOS_API_REPO:latest
 
     - name: Update kube config
       run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
