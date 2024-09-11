@@ -42,7 +42,7 @@ impl RabbitMQPagamentoUpdateSubscriber {
         self,
     ) -> Result<()> {
         let res: Result<()> = async_global_executor::block_on(async {
-            let conn = Connection::connect(self.config.rabbitmq_addr.unwrap().as_str(), ConnectionProperties::default()).await?;
+            let conn = Connection::connect(self.config.rabbitmq_addr.as_str(), ConnectionProperties::default()).await?;
             let channel = conn.create_channel().await?;
             let mut consumer = channel
                 .basic_consume(
