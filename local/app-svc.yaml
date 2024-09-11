@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tech-challenge-pedido-produto-nodeport-svc
+spec:
+  type: NodePort
+  selector:
+    app: tech-challenge-pedido-produto
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 31200
