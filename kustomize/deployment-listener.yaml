@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: listener
+  labels:
+    app: listener
+spec:
+  template:
+    metadata:
+      name: listener
+      labels:
+        app: listener
+    spec:
+      containers:
+        - name: listener-container
+          image: 891376965147.dkr.ecr.us-east-1.amazonaws.com/atualiza_pedido:latest
+          ports:
+            - containerPort: 3000   
+          envFrom:
+          - configMapRef:
+              name: app-configmap      
+          resources:
+            requests:
+              cpu: 1m
+  replicas: 1
+  selector:
+    matchLabels:
+      app: listener
