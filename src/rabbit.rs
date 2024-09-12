@@ -32,13 +32,7 @@ impl RabbitMQPagamentoUpdateSubscriber {
         }
     }
 
-    pub fn subscribe(&self) {
-        tokio::spawn(
-            self.clone().subscribe_pagamento_queue(),
-        );
-    }
-
-    async fn subscribe_pagamento_queue(
+    pub async fn subscribe_pagamento_queue(
         self,
     ) -> Result<()> {
         let res: Result<()> = async_global_executor::block_on(async {

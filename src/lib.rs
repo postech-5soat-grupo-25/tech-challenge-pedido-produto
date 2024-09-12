@@ -3,11 +3,12 @@
 #[macro_use] extern crate rocket;
 
 pub mod api;
+pub mod rabbit;
 mod adapters;
 mod base;
 mod controllers;
 mod entities;
-mod external;
-mod gateways;
-mod traits;
+pub mod external;
+pub mod gateways;
+pub mod traits;
 mod use_cases;

@@ -14,11 +14,11 @@ RUN apk add musl-dev openssl-dev
 
 COPY . .
 
-RUN cargo build --release --bin api
+RUN cargo build --release --bin listener
 
 # Criando um novo stage com imagem scratch e passando apenas os 
 # arquivos necessarios
 FROM scratch as production
 COPY --from=builder /usr/src/tech-challenge/target/release /
-ENTRYPOINT [ "/api" ]
+ENTRYPOINT [ "/listener" ]
 EXPOSE 3000

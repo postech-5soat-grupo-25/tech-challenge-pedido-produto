@@ -8,11 +8,10 @@ use tokio::sync::Mutex;
 
 use super::error_handling::generic_catchers;
 use super::routes::{pedido_route, produto_route};
-use crate::adapters::rabbitmq_pagament_update_subscriber::RabbitMQPagamentoUpdateSubscriber;
 use crate::adapters::{
     api_key_validator::ApiKeyValidator, user_group_validator::UserGroupValidator,
 };
-use crate::api::config::{Config, Env};
+use crate::api::config::Config;
 use crate::external::postgres;
 use crate::gateways::in_memory_pedido_gateway::InMemoryPedidoRepository;
 use crate::gateways::in_memory_produto_gateway::InMemoryProdutoRepository;
@@ -85,17 +84,6 @@ pub async fn main() -> Rocket<Build> {
     let user_group_validator = UserGroupValidator::new();
     let user_group_validator: Arc<dyn UserGroupValidatorAdapter + Sync + Send> =
         Arc::new(user_group_validator);
-
-
-    let pagamento_update_subscriber = RabbitMQPagamentoUpdateSubscriber::new(
-        config.clone(),
-        produto_gateway.clone(),
-        pedido_gateway.clone(),
-    );
-
-    pagamento_update_subscriber.subscribe();
-
-    
 
     rocket::build()
         .mount("/", routes![redirect_to_docs])
