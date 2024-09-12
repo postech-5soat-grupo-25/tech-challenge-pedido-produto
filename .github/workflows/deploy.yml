@@ -41,7 +41,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
         IMAGE_TAG: ${{ steps.commit.outputs.short }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest -f ./docker-api/Dockerfile
+        docker build -t $ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest -f Dockerfile ./docker-api/
         docker push $ECR_REGISTRY/$ECR_RUST_API_REPOSITORY:latest
 
     - name: Update kube config
@@ -86,7 +86,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
         IMAGE_TAG: ${{ steps.commit.outputs.short }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_LISTENER_API_REPOSITORY:latest -f ./docker-listener/Dockerfile
+        docker build -t $ECR_REGISTRY/$ECR_LISTENER_API_REPOSITORY:latest -f Dockerfile ./docker-listener/
         docker push $ECR_REGISTRY/$ECR_LISTENER_API_REPOSITORY:latest
 
     - name: Update kube config
